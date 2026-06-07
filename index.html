@@ -538,6 +538,15 @@
       </div>
 
       <div class="card">
+        <h3>ℹ️ バージョン情報</h3>
+        <div style="display:flex;justify-content:space-between;align-items:center;font-size:14px;">
+          <span style="color:#555;">備えログ</span>
+          <span id="version-label" style="font-weight:bold;color:#2d6a4f;font-size:16px;"></span>
+        </div>
+        <div id="version-date" style="font-size:12px;color:#aaa;margin-top:4px;"></div>
+      </div>
+
+      <div class="card">
         <h3>🔔 通知設定</h3>
         <p style="font-size:13px;color:#666;margin-bottom:12px;">アプリを開いたとき、期限が7日以内の在庫をお知らせします</p>
         <button id="notif-btn" onclick="requestNotificationPermission()" style="width:100%;padding:11px;background:#4a9eda;color:white;border:none;border-radius:10px;font-size:14px;font-weight:bold;cursor:pointer;">通知を有効にする</button>
@@ -567,6 +576,11 @@
   </nav>
 
   <script>
+    const VERSION = '2026.06.07';
+
+    document.getElementById('version-label').textContent = 'v' + VERSION;
+    document.getElementById('version-date').textContent = '最終更新: ' + VERSION.replace(/\./g, '/');
+
     // Service Worker 登録
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('./sw.js');
