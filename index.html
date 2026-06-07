@@ -413,6 +413,17 @@
         <div class="gauge-bar">
           <div class="gauge-fill" id="utility-fill" style="width:0%"></div>
         </div>
+        <div id="pet-gauge-row" style="display:none;">
+          <div class="gauge-label" style="margin-top:10px">
+            <span id="pet-gauge-label">ペットのたべ物</span>
+            <span style="text-align:right;">
+              <span id="pet-fraction" style="font-size:12px;color:#888;margin-right:6px;"></span><span id="pet-pct">0%</span>
+            </span>
+          </div>
+          <div class="gauge-bar">
+            <div class="gauge-fill" id="pet-fill" style="width:0%"></div>
+          </div>
+        </div>
         <div id="gauge-note" class="gauge-note">設定から家族構成を登録すると自動計算されます</div>
       </div>
 
@@ -618,7 +629,7 @@
   </nav>
 
   <script>
-    const VERSION = '2026.06.07-15';
+    const VERSION = '2026.06.07-16';
 
     document.getElementById('version-label').textContent = 'v' + VERSION;
     document.getElementById('version-date').textContent =
@@ -848,7 +859,26 @@
       document.getElementById('utility-fill').style.width = utilityPct + '%';
       document.getElementById('utility-fill').style.background = gaugeColor(utilityPct);
 
-      document.getElementById('gauge-note').textContent = `${days}日分の目安（たべ物：1人1日3食 ／ のみ物：3L ／ 生活用水：10L）`;
+      // ペット：1日2回給餌を基準（ペットがいる場合のみ表示）
+      const petType = s.petType || 'なし';
+      const petRow = document.getElementById('pet-gauge-row');
+      if (petType !== 'なし') {
+        petRow.style.display = 'block';
+        const requiredPet = days * 2;
+        const actualPet = items
+          .filter(i => i.category === 'ペット')
+          .reduce((sum, i) => sum + i.qty, 0);
+        const petPct = Math.min(100, Math.round(actualPet / requiredPet * 100));
+        document.getElementById('pet-gauge-label').textContent = `ペット（${petType}）のたべ物`;
+        document.getElementById('pet-fraction').textContent = `${actualPet}回分 / ${requiredPet}回分`;
+        document.getElementById('pet-pct').textContent = petPct + '%';
+        document.getElementById('pet-fill').style.width = petPct + '%';
+        document.getElementById('pet-fill').style.background = gaugeColor(petPct);
+      } else {
+        petRow.style.display = 'none';
+      }
+
+      document.getElementById('gauge-note').textContent = `${days}日分の目安（たべ物：1人1日3食 ／ のみ物：3L ／ 生活用水：10L ／ ペット：1日2回）`;
 
       // 期限アラート（30日以内）
       const alertList = document.getElementById('alert-list');
