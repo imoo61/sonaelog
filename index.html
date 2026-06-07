@@ -883,7 +883,7 @@
       if (days < 0)  return `<span class="badge danger">期限切れ</span>`;
       if (days <= 7) return `<span class="badge danger">あと${days}日</span>`;
       if (days <= 30) return `<span class="badge warning">あと${days}日</span>`;
-      return `<span class="badge" style="background:#e8f5e9;color:#2d6a4f;">余裕あり</span>`;
+      return `<span class="badge" style="background:#e8f5e9;color:#2d6a4f;">あと${days}日・余裕あり</span>`;
     }
 
     function renderItems() {
