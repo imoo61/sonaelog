@@ -119,14 +119,10 @@
     /* 在庫リスト：カテゴリタブ */
     .tabs {
       display: flex;
+      flex-wrap: wrap;
       gap: 8px;
       margin-bottom: 16px;
-      overflow-x: auto;
-      -webkit-overflow-scrolling: touch;
-      scrollbar-width: none;
-      padding-bottom: 2px;
     }
-    .tabs::-webkit-scrollbar { display: none; }
     .tab {
       padding: 8px 16px;
       border-radius: 20px;
@@ -136,8 +132,6 @@
       background: #e0e0e0;
       color: #555;
       transition: all 0.2s;
-      white-space: nowrap;
-      flex-shrink: 0;
       touch-action: manipulation;
     }
     .tab.active {
@@ -624,7 +618,7 @@
   </nav>
 
   <script>
-    const VERSION = '2026.06.07-14';
+    const VERSION = '2026.06.07-15';
 
     document.getElementById('version-label').textContent = 'v' + VERSION;
     document.getElementById('version-date').textContent =
