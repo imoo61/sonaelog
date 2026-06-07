@@ -11,7 +11,7 @@
   <meta name="apple-mobile-web-app-title" content="備えログ">
   <link rel="apple-touch-icon" href="icon.svg">
   <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
+    * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 
     body {
       font-family: 'Hiragino Sans', 'Meiryo', sans-serif;
@@ -22,6 +22,7 @@
       min-height: 100vh;
       display: flex;
       flex-direction: column;
+      -webkit-text-size-adjust: 100%;
     }
 
     /* ヘッダー */
@@ -120,17 +121,24 @@
       display: flex;
       gap: 8px;
       margin-bottom: 16px;
-      flex-wrap: wrap;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: none;
+      padding-bottom: 2px;
     }
+    .tabs::-webkit-scrollbar { display: none; }
     .tab {
-      padding: 6px 14px;
+      padding: 8px 16px;
       border-radius: 20px;
-      font-size: 13px;
+      font-size: 14px;
       border: none;
       cursor: pointer;
       background: #e0e0e0;
       color: #555;
       transition: all 0.2s;
+      white-space: nowrap;
+      flex-shrink: 0;
+      touch-action: manipulation;
     }
     .tab.active {
       background: #2d6a4f;
@@ -161,52 +169,84 @@
     }
     .form-group input, .form-group select {
       width: 100%;
-      padding: 10px 12px;
+      padding: 12px 14px;
       border: 1px solid #ddd;
       border-radius: 8px;
-      font-size: 14px;
+      font-size: 16px; /* 16px未満だとiOSが自動ズームする */
       background: white;
+      appearance: none;
+      -webkit-appearance: none;
     }
 
     /* エクスポートボタン */
     #export-btn {
       width: 100%;
-      padding: 12px;
+      padding: 14px;
       background: white;
       color: #2d6a4f;
       border: 2px solid #2d6a4f;
       border-radius: 10px;
-      font-size: 14px;
+      font-size: 16px;
       font-weight: bold;
       cursor: pointer;
       margin-bottom: 16px;
+      touch-action: manipulation;
     }
     #export-btn:active { background: #e8f5e9; }
 
     /* 追加・保存ボタン共通 */
     #add-btn {
       width: 100%;
-      padding: 12px;
+      padding: 14px;
       background: #52b788;
       color: white;
       border: none;
       border-radius: 10px;
-      font-size: 15px;
+      font-size: 16px;
       font-weight: bold;
       cursor: pointer;
+      touch-action: manipulation;
     }
     #add-btn:active { background: #3a8f6a; }
 
-    /* 削除ボタン */
-    .delete-btn {
+    /* 削除・編集ボタン */
+    .delete-btn, .edit-btn {
       background: none;
       border: none;
-      color: #ccc;
       font-size: 18px;
       cursor: pointer;
-      padding: 4px;
+      padding: 10px 8px;
+      min-width: 44px;
+      min-height: 44px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      touch-action: manipulation;
     }
-    .delete-btn:hover { color: #e53e3e; }
+    .delete-btn { color: #ccc; }
+    .delete-btn:active { color: #e53e3e; }
+    .edit-btn { color: #ccc; }
+    .edit-btn:active { color: #2d6a4f; }
+
+    /* 編集モード時のフォームカード強調 */
+    .card.editing {
+      border: 2px solid #52b788;
+    }
+    .card.editing h3 { color: #2d6a4f; }
+
+    /* キャンセルボタン */
+    #cancel-edit-btn {
+      width: 100%;
+      padding: 11px;
+      background: white;
+      color: #888;
+      border: 1px solid #ddd;
+      border-radius: 10px;
+      font-size: 14px;
+      cursor: pointer;
+      margin-top: 8px;
+    }
+    #cancel-edit-btn:active { background: #f5f5f5; }
 
     /* ビュー切り替えトグル */
     .view-toggle {
@@ -218,14 +258,15 @@
     }
     .view-toggle-btn {
       flex: 1;
-      padding: 7px 0;
+      padding: 10px 0;
       border: none;
       background: transparent;
       border-radius: 17px;
-      font-size: 13px;
+      font-size: 14px;
       cursor: pointer;
       color: #555;
       transition: all 0.2s;
+      touch-action: manipulation;
     }
     .view-toggle-btn.active {
       background: #2d6a4f;
@@ -280,6 +321,7 @@
       font-weight: bold;
       cursor: pointer;
       margin-bottom: 8px;
+      touch-action: manipulation;
     }
     #save-btn:active { background: #1e4d38; }
 
@@ -290,6 +332,7 @@
       display: flex;
       position: sticky;
       bottom: 0;
+      padding-bottom: env(safe-area-inset-bottom);
     }
     .nav-btn {
       flex: 1;
@@ -304,8 +347,9 @@
       font-size: 11px;
       color: #888;
       transition: color 0.2s;
+      touch-action: manipulation;
     }
-    .nav-btn span.icon { font-size: 22px; }
+    .nav-btn span.icon { font-size: 24px; }
     .nav-btn.active { color: #2d6a4f; font-weight: bold; }
   </style>
 </head>
@@ -333,7 +377,7 @@
           <div class="gauge-fill" id="food-fill" style="width:0%"></div>
         </div>
         <div class="gauge-label" style="margin-top:10px">
-          <span>水（2Lボトル換算）</span>
+          <span>水・飲料（L換算）</span>
           <span id="water-pct">0%</span>
         </div>
         <div class="gauge-bar">
@@ -387,8 +431,9 @@
 
         <div class="form-group">
           <label>カテゴリ</label>
-          <select id="item-category">
+          <select id="item-category" onchange="updateWaterOptions()">
             <option value="食料">食料</option>
+            <option value="飲料">飲料</option>
             <option value="衛生">衛生</option>
             <option value="ペット">ペット</option>
             <option value="道具">道具</option>
@@ -418,6 +463,7 @@
           <input id="item-expiry" type="date">
         </div>
         <button id="add-btn" onclick="addItem()">追加する</button>
+        <button id="cancel-edit-btn" onclick="cancelEdit()" style="display:none;">キャンセル</button>
       </div>
 
       <!-- ビュー切り替え -->
@@ -430,6 +476,7 @@
       <div class="tabs" id="category-tabs">
         <button class="tab active" onclick="switchTab('すべて', this)">すべて</button>
         <button class="tab" onclick="switchTab('食料', this)">食料</button>
+        <button class="tab" onclick="switchTab('飲料', this)">飲料</button>
         <button class="tab" onclick="switchTab('衛生', this)">衛生</button>
         <button class="tab" onclick="switchTab('ペット', this)">ペット</button>
         <button class="tab" onclick="switchTab('道具', this)">道具</button>
@@ -637,17 +684,17 @@
 
       const items = loadItems();
 
-      // 食料：1人1日3食として必要アイテム数を計算
+      // 食料：1人1日3食として必要アイテム数を計算（水を除く）
       const requiredFood = people * days * 3;
       const actualFood = items
-        .filter(i => i.category === '食料')
+        .filter(i => i.category === '食料' && !i.name.includes('水'))
         .reduce((sum, i) => sum + i.qty, 0);
       const foodPct = requiredFood > 0 ? Math.min(100, Math.round(actualFood / requiredFood * 100)) : 0;
 
-      // 水：1人1日3L
+      // 水・飲料：1人1日3L（「飲料」カテゴリ＋食料カテゴリで名前に「水」を含むもの）
       const requiredWater = people * days * 3;
       const actualWater = items
-        .filter(i => i.category === '食料' && i.name.includes('水'))
+        .filter(i => i.category === '飲料' || (i.category === '食料' && i.name.includes('水')))
         .reduce((sum, i) => sum + (i.bottleSize != null ? i.qty * i.bottleSize : i.qty), 0);
       const waterPct = requiredWater > 0 ? Math.min(100, Math.round(actualWater / requiredWater * 100)) : 0;
 
@@ -673,7 +720,7 @@
             <div class="alert-item">
               <div>
                 <div>${item.name}</div>
-                <div style="font-size:12px;color:#888;">${item.qty}個 ／ ${item.category}</div>
+                <div style="font-size:12px;color:#888;">${item.qty}個 ／ ${item.category}${item.location ? ' ／ ' + locationIcon(item.location) + item.location : ''}</div>
               </div>
               ${badgeHtml(days2)}
             </div>`;
@@ -681,11 +728,14 @@
       }
     }
 
-    // 品名に「水」が含まれたら水オプションを表示
-    document.getElementById('item-name').addEventListener('input', function() {
+    function updateWaterOptions() {
+      const name = document.getElementById('item-name').value;
+      const category = document.getElementById('item-category').value;
       document.getElementById('water-options').style.display =
-        this.value.includes('水') ? 'block' : 'none';
-    });
+        (name.includes('水') || category === '飲料') ? 'block' : 'none';
+    }
+
+    document.getElementById('item-name').addEventListener('input', updateWaterOptions);
 
     function toggleCustomVolume(sel) {
       document.getElementById('custom-volume-group').style.display =
@@ -704,6 +754,7 @@
     // ---- 在庫管理 ----
     let currentTab = 'すべて';
     let currentView = 'category';
+    let editingId = null;
 
     const LOCATION_ICONS = { '玄関': '🚪', 'リビング': '🛋', 'キッチン': '🍳', '寝室': '🛏', '押し入れ': '📦', '物置': '🏠', '車': '🚗', '勝手口': '🚪', '天井裏': '🏗', 'その他': '📍' };
     const LOCATION_ORDER = ['玄関', '勝手口', 'リビング', 'キッチン', '寝室', '押し入れ', '物置', '天井裏', '車', 'その他'];
@@ -724,12 +775,11 @@
     }
 
     function qtyLabel(item) {
-      if (item.name.includes('水') && item.bottleSize != null) {
-        const totalL = item.qty * item.bottleSize;
+      if (item.bottleSize != null) {
+        const totalL = Math.round(item.qty * item.bottleSize * 10) / 10;
         const sizeLabel = item.bottleSize < 1 ? `${item.bottleSize * 1000}ml` : `${item.bottleSize}L`;
         return `${item.qty}本（${sizeLabel}）計${totalL}L`;
       }
-      if (item.name.includes('水')) return `${item.qty}L`;
       return `${item.qty}個`;
     }
 
@@ -776,6 +826,7 @@
             </div>
           </div>
           ${badgeHtml(days)}
+          <button class="edit-btn" onclick="editItem('${item.id}')">✏️</button>
           <button class="delete-btn" onclick="deleteItem('${item.id}')">🗑</button>
         `;
         list.appendChild(div);
@@ -786,7 +837,7 @@
       const name = document.getElementById('item-name').value.trim();
       if (!name) { alert('品名を入力してください'); return; }
 
-      const isWater = name.includes('水');
+      const isWater = name.includes('水') || document.getElementById('item-category').value === '飲料';
       let bottleSize = null;
       if (isWater) {
         const sizeVal = document.getElementById('item-bottle-size').value;
@@ -795,29 +846,87 @@
           : parseFloat(sizeVal);
       }
 
-      const items = loadItems();
-      items.push({
-        id:         Date.now().toString(),
-        name:       name,
+      const newData = {
+        name,
         category:   document.getElementById('item-category').value,
         location:   document.getElementById('item-location').value,
         qty:        parseInt(document.getElementById('item-qty').value) || 1,
-        bottleSize: bottleSize,
+        bottleSize,
         expiry:     document.getElementById('item-expiry').value,
-      });
-      saveItems(items);
+      };
 
-      document.getElementById('item-name').value = '';
-      document.getElementById('item-expiry').value = '';
-      document.getElementById('item-qty').value = '1';
-      document.getElementById('water-options').style.display = 'none';
-      document.getElementById('item-bottle-size').value = '2';
-      document.getElementById('custom-volume-group').style.display = 'none';
+      const items = loadItems();
+      if (editingId) {
+        const idx = items.findIndex(i => i.id === editingId);
+        if (idx !== -1) items[idx] = { ...items[idx], ...newData };
+      } else {
+        items.push({ id: Date.now().toString(), ...newData });
+      }
+      saveItems(items);
+      resetForm();
 
       if (currentView === 'location') renderByLocation(); else renderItems();
     }
 
+    function editItem(id) {
+      const item = loadItems().find(i => i.id === id);
+      if (!item) return;
+
+      editingId = id;
+      document.getElementById('item-name').value = item.name;
+      document.getElementById('item-category').value = item.category;
+      document.getElementById('item-location').value = item.location || '玄関';
+      document.getElementById('item-qty').value = item.qty;
+      document.getElementById('item-expiry').value = item.expiry || defaultExpiryDate();
+
+      updateWaterOptions();
+      if (item.bottleSize != null) {
+        const standardSizes = ['0.5', '1', '2'];
+        const sizeStr = String(item.bottleSize);
+        if (standardSizes.includes(sizeStr)) {
+          document.getElementById('item-bottle-size').value = sizeStr;
+          document.getElementById('custom-volume-group').style.display = 'none';
+        } else {
+          document.getElementById('item-bottle-size').value = 'custom';
+          document.getElementById('item-custom-volume').value = item.bottleSize;
+          document.getElementById('custom-volume-group').style.display = 'block';
+        }
+      }
+
+      const formCard = document.querySelector('#screen-inventory .card');
+      formCard.classList.add('editing');
+      formCard.querySelector('h3').textContent = '✏️ 在庫を編集';
+      document.getElementById('add-btn').textContent = '更新する';
+      document.getElementById('cancel-edit-btn').style.display = 'block';
+
+      formCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    function cancelEdit() {
+      resetForm();
+    }
+
+    function resetForm() {
+      editingId = null;
+      document.getElementById('item-name').value = '';
+      document.getElementById('item-expiry').value = defaultExpiryDate();
+      document.getElementById('item-qty').value = '1';
+      document.getElementById('item-category').value = '食料';
+      document.getElementById('water-options').style.display = 'none';
+      document.getElementById('item-bottle-size').value = '2';
+      document.getElementById('custom-volume-group').style.display = 'none';
+
+      const formCard = document.querySelector('#screen-inventory .card');
+      formCard.classList.remove('editing');
+      formCard.querySelector('h3').textContent = '➕ 在庫を追加';
+      document.getElementById('add-btn').textContent = '追加する';
+      document.getElementById('cancel-edit-btn').style.display = 'none';
+    }
+
     function deleteItem(id) {
+      const item = loadItems().find(i => i.id === id);
+      if (!item) return;
+      if (!confirm(`「${item.name}」を削除しますか？`)) return;
       const items = loadItems().filter(i => i.id !== id);
       saveItems(items);
       if (currentView === 'location') renderByLocation(); else renderItems();
@@ -897,12 +1006,21 @@
                     <div class="stock-meta">${item.category} ／ ${qtyLabel(item)}${item.expiry ? ' ／ 期限: ' + item.expiry : ''}</div>
                   </div>
                   ${badgeHtml(days)}
+                  <button class="edit-btn" onclick="editItem('${item.id}')">✏️</button>
                   <button class="delete-btn" onclick="deleteItem('${item.id}')">🗑</button>
                 </div>`;
             }).join('')}
           </div>`;
       }).join('');
     }
+
+    function defaultExpiryDate() {
+      const d = new Date();
+      d.setFullYear(d.getFullYear() + 1);
+      return d.toISOString().slice(0, 10);
+    }
+
+    document.getElementById('item-expiry').value = defaultExpiryDate();
 
     renderItems();
 
