@@ -394,14 +394,18 @@
         <h3 id="gauge-title">備蓄充足率（7日分基準）</h3>
         <div class="gauge-label">
           <span>食料</span>
-          <span id="food-pct">0%</span>
+          <span style="text-align:right;">
+            <span id="food-fraction" style="font-size:12px;color:#888;margin-right:6px;"></span><span id="food-pct">0%</span>
+          </span>
         </div>
         <div class="gauge-bar">
           <div class="gauge-fill" id="food-fill" style="width:0%"></div>
         </div>
         <div class="gauge-label" style="margin-top:10px">
           <span>水・飲料（L換算）</span>
-          <span id="water-pct">0%</span>
+          <span style="text-align:right;">
+            <span id="water-fraction" style="font-size:12px;color:#888;margin-right:6px;"></span><span id="water-pct">0%</span>
+          </span>
         </div>
         <div class="gauge-bar">
           <div class="gauge-fill" id="water-fill" style="width:0%"></div>
@@ -599,7 +603,7 @@
   </nav>
 
   <script>
-    const VERSION = '2026.06.07-6';
+    const VERSION = '2026.06.07-7';
 
     document.getElementById('version-label').textContent = 'v' + VERSION;
     document.getElementById('version-date').textContent =
@@ -806,14 +810,17 @@
         .reduce((sum, i) => sum + (i.bottleSize != null ? i.qty * i.bottleSize : i.qty), 0);
       const waterPct = requiredWater > 0 ? Math.min(100, Math.round(actualWater / requiredWater * 100)) : 0;
 
+      document.getElementById('food-fraction').textContent = `${actualFood}食 / ${requiredFood}食`;
       document.getElementById('food-pct').textContent = foodPct + '%';
       document.getElementById('food-fill').style.width = foodPct + '%';
       document.getElementById('food-fill').style.background = gaugeColor(foodPct);
+
+      const actualWaterRounded = Math.round(actualWater * 10) / 10;
+      document.getElementById('water-fraction').textContent = `${actualWaterRounded}L / ${requiredWater}L`;
       document.getElementById('water-pct').textContent = waterPct + '%';
       document.getElementById('water-fill').style.width = waterPct + '%';
       document.getElementById('water-fill').style.background = gaugeColor(waterPct);
-      document.getElementById('gauge-note').textContent =
-        `必要食料: 約${requiredFood}食 ／ 必要水: 約${requiredWater}L`;
+      document.getElementById('gauge-note').textContent = `${days}日分の目安（1人1日3食・3L）`;
 
       // 期限アラート（30日以内）
       const alertList = document.getElementById('alert-list');
