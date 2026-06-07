@@ -686,7 +686,9 @@
         btn.textContent = '🚫 通知がブロックされています';
         btn.style.background = '#aaa';
         btn.disabled = true;
-        status.textContent = '設定アプリ → Safari → 詳細 → Webサイトの設定 から許可してください';
+        status.textContent = isStandalone()
+          ? '設定アプリ → 備えログ → 通知 → オン にしてください'
+          : '設定アプリ → Safari → 詳細 → Webサイトの設定 から許可してください';
       }
     }
 
