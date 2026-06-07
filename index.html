@@ -634,7 +634,7 @@
   </nav>
 
   <script>
-    const VERSION = '2026.06.07-18';
+    const VERSION = '2026.06.07-19';
 
     document.getElementById('version-label').textContent = 'v' + VERSION;
     document.getElementById('version-date').textContent =
@@ -862,8 +862,8 @@
       document.getElementById('water-fill').style.width = waterPct + '%';
       document.getElementById('water-fill').style.background = gaugeColor(waterPct);
 
-      // 生活用水：1人1日10L
-      const requiredUtility = people * days * 10;
+      // 生活用水：1人1日5L（手洗い・歯磨き・食器洗い・清拭。トイレ・入浴は除く）
+      const requiredUtility = people * days * 5;
       const actualUtility = items
         .filter(i => i.category === '生活用水')
         .reduce((sum, i) => sum + (i.bottleSize != null ? i.qty * i.bottleSize : i.qty), 0);
@@ -900,7 +900,7 @@
         petRow.style.display = 'none';
       }
 
-      document.getElementById('gauge-note').textContent = `${days}日分の目安（たべ物：1人1日3食 ／ のみ物：3L ／ 生活用水：10L）`;
+      document.getElementById('gauge-note').textContent = `${days}日分の目安（たべ物：1人1日3食 ／ のみ物：3L ／ 生活用水：5L）`;
 
       // 期限アラート（30日以内）
       const alertList = document.getElementById('alert-list');
