@@ -624,7 +624,7 @@
   </nav>
 
   <script>
-    const VERSION = '2026.06.07-13';
+    const VERSION = '2026.06.07-14';
 
     document.getElementById('version-label').textContent = 'v' + VERSION;
     document.getElementById('version-date').textContent =
@@ -1047,7 +1047,7 @@
         }
       }
 
-      const formCard = document.querySelector('#screen-inventory .card');
+      const formCard = document.querySelector('#screen-add .card');
       formCard.classList.add('editing');
       formCard.querySelector('h3').textContent = '✏️ 在庫を編集';
       document.getElementById('add-btn').textContent = '更新する';
@@ -1073,7 +1073,7 @@
       document.getElementById('item-bottle-size').value = '2';
       document.getElementById('custom-volume-group').style.display = 'none';
 
-      const formCard = document.querySelector('#screen-inventory .card');
+      const formCard = document.querySelector('#screen-add .card');
       formCard.classList.remove('editing');
       formCard.querySelector('h3').textContent = '➕ 備品追加';
       document.getElementById('add-btn').textContent = '追加する';
