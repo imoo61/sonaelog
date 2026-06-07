@@ -574,7 +574,12 @@
         </div>
         <div class="form-group" id="pet-weight-group">
           <label>体重（kg）</label>
-          <input id="pet-weight" type="number" value="8" min="0" step="0.1">
+          <input id="pet-weight" type="number" value="8" min="0" step="0.1" oninput="updatePetFeedingDefault()">
+        </div>
+        <div class="form-group" id="pet-feeding-group">
+          <label>1日の給餌量（g）</label>
+          <input id="pet-feeding" type="number" value="85" min="1" step="1">
+          <div style="font-size:12px;color:#aaa;margin-top:4px;">体重から目安を自動計算。実際の量に合わせて変更してください</div>
         </div>
       </div>
 
@@ -629,7 +634,7 @@
   </nav>
 
   <script>
-    const VERSION = '2026.06.07-17';
+    const VERSION = '2026.06.07-18';
 
     document.getElementById('version-label').textContent = 'v' + VERSION;
     document.getElementById('version-date').textContent =
@@ -763,19 +768,27 @@
       btn.classList.add('active');
     }
 
-    // ペット種類が「なし」のとき体重欄を非表示
+    // ペット種類が「なし」のとき体重・給餌量欄を非表示
     document.getElementById('pet-type').addEventListener('change', function() {
-      document.getElementById('pet-weight-group').style.display =
-        this.value === 'なし' ? 'none' : 'block';
+      const show = this.value !== 'なし';
+      document.getElementById('pet-weight-group').style.display  = show ? 'block' : 'none';
+      document.getElementById('pet-feeding-group').style.display = show ? 'block' : 'none';
     });
+
+    // 体重から給餌量の目安を自動計算
+    function updatePetFeedingDefault() {
+      const w = parseFloat(document.getElementById('pet-weight').value) || 0;
+      if (w > 0) document.getElementById('pet-feeding').value = Math.round(w * 10);
+    }
 
     // 設定を保存
     function saveSettings() {
       const settings = {
         adults:    parseInt(document.getElementById('adults').value) || 2,
         children:  parseInt(document.getElementById('children').value) || 0,
-        petType:   document.getElementById('pet-type').value,
-        petWeight: parseFloat(document.getElementById('pet-weight').value) || 0,
+        petType:    document.getElementById('pet-type').value,
+        petWeight:  parseFloat(document.getElementById('pet-weight').value) || 0,
+        petFeeding: parseInt(document.getElementById('pet-feeding').value) || 85,
         baseDays:  parseInt(document.getElementById('base-days').value) || 7,
       };
       localStorage.setItem('sonaelog-settings', JSON.stringify(settings));
@@ -794,12 +807,14 @@
       const s = JSON.parse(raw);
       document.getElementById('adults').value      = s.adults;
       document.getElementById('children').value    = s.children;
-      document.getElementById('pet-type').value    = s.petType;
-      document.getElementById('pet-weight').value  = s.petWeight;
+      document.getElementById('pet-type').value     = s.petType;
+      document.getElementById('pet-weight').value   = s.petWeight;
+      document.getElementById('pet-feeding').value  = s.petFeeding || Math.round((s.petWeight || 8) * 10);
       document.getElementById('base-days').value   = s.baseDays;
 
       if (s.petType === 'なし') {
-        document.getElementById('pet-weight-group').style.display = 'none';
+        document.getElementById('pet-weight-group').style.display  = 'none';
+        document.getElementById('pet-feeding-group').style.display = 'none';
       }
 
       updateDashboard(s);
@@ -859,18 +874,25 @@
       document.getElementById('utility-fill').style.width = utilityPct + '%';
       document.getElementById('utility-fill').style.background = gaugeColor(utilityPct);
 
-      // ペット：1日2回給餌を基準（ペットがいる場合のみ表示）
+      // ペット：給餌量(g)ベースで計算（ペットがいる場合のみ表示）
       const petType = s.petType || 'なし';
       const petRow = document.getElementById('pet-gauge-row');
       if (petType !== 'なし') {
         petRow.style.display = 'block';
-        const requiredPet = days * 2;
-        const actualPet = items
+        const feedingG = s.petFeeding || Math.round((s.petWeight || 8) * 10);
+        const requiredPetG = feedingG * days;
+        const actualPetG = items
           .filter(i => i.category === 'ペット')
-          .reduce((sum, i) => sum + i.qty, 0);
-        const petPct = Math.min(100, Math.round(actualPet / requiredPet * 100));
+          .reduce((sum, i) => {
+            const u = (i.unit || '').toLowerCase();
+            if (u === 'kg') return sum + i.qty * 1000;
+            if (u === 'g')  return sum + i.qty;
+            return sum + i.qty * feedingG; // 単位不明は1個=1日分として換算
+          }, 0);
+        const petPct = Math.min(100, Math.round(actualPetG / requiredPetG * 100));
+        const toLabel = g => g >= 1000 ? `${Math.round(g/100)/10}kg` : `${g}g`;
         document.getElementById('pet-gauge-label').textContent = `ペット（${petType}）のたべ物`;
-        document.getElementById('pet-fraction').textContent = `${actualPet}回分 / ${requiredPet}回分`;
+        document.getElementById('pet-fraction').textContent = `${toLabel(actualPetG)} / ${toLabel(requiredPetG)}`;
         document.getElementById('pet-pct').textContent = petPct + '%';
         document.getElementById('pet-fill').style.width = petPct + '%';
         document.getElementById('pet-fill').style.background = gaugeColor(petPct);
@@ -878,7 +900,7 @@
         petRow.style.display = 'none';
       }
 
-      document.getElementById('gauge-note').textContent = `${days}日分の目安（たべ物：1人1日3食 ／ のみ物：3L ／ 生活用水：10L ／ ペット：1日2回）`;
+      document.getElementById('gauge-note').textContent = `${days}日分の目安（たべ物：1人1日3食 ／ のみ物：3L ／ 生活用水：10L）`;
 
       // 期限アラート（30日以内）
       const alertList = document.getElementById('alert-list');
