@@ -393,7 +393,7 @@
       <div class="card">
         <h3 id="gauge-title">備蓄充足率（7日分基準）</h3>
         <div class="gauge-label">
-          <span>食料</span>
+          <span>たべ物</span>
           <span style="text-align:right;">
             <span id="food-fraction" style="font-size:12px;color:#888;margin-right:6px;"></span><span id="food-pct">0%</span>
           </span>
@@ -402,7 +402,7 @@
           <div class="gauge-fill" id="food-fill" style="width:0%"></div>
         </div>
         <div class="gauge-label" style="margin-top:10px">
-          <span>水・飲料（L換算）</span>
+          <span>水・のみ物（L換算）</span>
           <span style="text-align:right;">
             <span id="water-fraction" style="font-size:12px;color:#888;margin-right:6px;"></span><span id="water-pct">0%</span>
           </span>
@@ -469,8 +469,8 @@
         <div class="form-group">
           <label>カテゴリ</label>
           <select id="item-category" onchange="updateWaterOptions()">
-            <option value="食料">食料</option>
-            <option value="飲料">飲料</option>
+            <option value="たべ物">たべ物</option>
+            <option value="のみ物">のみ物</option>
             <option value="生活用水">生活用水</option>
             <option value="衛生">衛生</option>
             <option value="ペット">ペット</option>
@@ -521,8 +521,8 @@
       <!-- カテゴリタブ（カテゴリ別ビュー時のみ表示） -->
       <div class="tabs" id="category-tabs">
         <button class="tab active" onclick="switchTab('すべて', this)">すべて</button>
-        <button class="tab" onclick="switchTab('食料', this)">食料</button>
-        <button class="tab" onclick="switchTab('飲料', this)">飲料</button>
+        <button class="tab" onclick="switchTab('たべ物', this)">たべ物</button>
+        <button class="tab" onclick="switchTab('のみ物', this)">のみ物</button>
         <button class="tab" onclick="switchTab('生活用水', this)">生活用水</button>
         <button class="tab" onclick="switchTab('衛生', this)">衛生</button>
         <button class="tab" onclick="switchTab('ペット', this)">ペット</button>
@@ -624,7 +624,7 @@
   </nav>
 
   <script>
-    const VERSION = '2026.06.07-11';
+    const VERSION = '2026.06.07-12';
 
     document.getElementById('version-label').textContent = 'v' + VERSION;
     document.getElementById('version-date').textContent =
@@ -817,17 +817,17 @@
 
       const items = loadItems();
 
-      // 食料：1人1日3食として必要アイテム数を計算（水を除く）
+      // たべ物：1人1日3食として必要アイテム数を計算（水を除く）
       const requiredFood = people * days * 3;
       const actualFood = items
-        .filter(i => i.category === '食料' && !i.name.includes('水'))
+        .filter(i => i.category === 'たべ物' && !i.name.includes('水'))
         .reduce((sum, i) => sum + i.qty, 0);
       const foodPct = requiredFood > 0 ? Math.min(100, Math.round(actualFood / requiredFood * 100)) : 0;
 
-      // 水・飲料：1人1日3L（「飲料」カテゴリ＋食料カテゴリで名前に「水」を含むもの）
+      // 水・のみ物：1人1日3L（「のみ物」カテゴリ＋たべ物カテゴリで名前に「水」を含むもの）
       const requiredWater = people * days * 3;
       const actualWater = items
-        .filter(i => i.category === '飲料' || (i.category === '食料' && i.name.includes('水')))
+        .filter(i => i.category === 'のみ物' || (i.category === 'たべ物' && i.name.includes('水')))
         .reduce((sum, i) => sum + (i.bottleSize != null ? i.qty * i.bottleSize : i.qty), 0);
       const waterPct = requiredWater > 0 ? Math.min(100, Math.round(actualWater / requiredWater * 100)) : 0;
 
@@ -854,7 +854,7 @@
       document.getElementById('utility-fill').style.width = utilityPct + '%';
       document.getElementById('utility-fill').style.background = gaugeColor(utilityPct);
 
-      document.getElementById('gauge-note').textContent = `${days}日分の目安（食料：1人1日3食 ／ 飲料：3L ／ 生活用水：10L）`;
+      document.getElementById('gauge-note').textContent = `${days}日分の目安（たべ物：1人1日3食 ／ のみ物：3L ／ 生活用水：10L）`;
 
       // 期限アラート（30日以内）
       const alertList = document.getElementById('alert-list');
@@ -883,7 +883,7 @@
       const name = document.getElementById('item-name').value;
       const category = document.getElementById('item-category').value;
       document.getElementById('water-options').style.display =
-        (name.includes('水') || category === '飲料' || category === '生活用水') ? 'block' : 'none';
+        (name.includes('水') || category === 'のみ物' || category === '生活用水') ? 'block' : 'none';
     }
 
     document.getElementById('item-name').addEventListener('input', updateWaterOptions);
@@ -989,7 +989,7 @@
       const name = document.getElementById('item-name').value.trim();
       if (!name) { alert('品名を入力してください'); return; }
 
-      const isWater = name.includes('水') || ['飲料', '生活用水'].includes(document.getElementById('item-category').value);
+      const isWater = name.includes('水') || ['のみ物', '生活用水'].includes(document.getElementById('item-category').value);
       let bottleSize = null;
       if (isWater) {
         const sizeVal = document.getElementById('item-bottle-size').value;
@@ -1068,7 +1068,7 @@
       document.getElementById('item-expiry').value = defaultExpiryDate();
       document.getElementById('item-qty').value = '1';
       document.getElementById('item-unit').value = '';
-      document.getElementById('item-category').value = '食料';
+      document.getElementById('item-category').value = 'たべ物';
       document.getElementById('water-options').style.display = 'none';
       document.getElementById('item-bottle-size').value = '2';
       document.getElementById('custom-volume-group').style.display = 'none';
