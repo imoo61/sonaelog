@@ -88,8 +88,8 @@
       background: linear-gradient(90deg, #2d6a4f, #52b788);
       height: 100%;
       border-radius: 8px;
-      width: 40%;
-      transition: width 0.5s ease;
+      width: 0%;
+      transition: width 0.5s ease, background 0.5s ease;
     }
     .gauge-note {
       font-size: 12px;
@@ -768,6 +768,12 @@
       updateDashboard(s);
     }
 
+    function gaugeColor(pct) {
+      if (pct <= 30) return 'linear-gradient(90deg, #9b2335, #e53e3e)';
+      if (pct <= 60) return 'linear-gradient(90deg, #c05621, #ed8936)';
+      return 'linear-gradient(90deg, #2d6a4f, #52b788)';
+    }
+
     // ダッシュボードを実データで更新
     function updateDashboard(s) {
       const days = s.baseDays || 7;
@@ -795,8 +801,10 @@
 
       document.getElementById('food-pct').textContent = foodPct + '%';
       document.getElementById('food-fill').style.width = foodPct + '%';
+      document.getElementById('food-fill').style.background = gaugeColor(foodPct);
       document.getElementById('water-pct').textContent = waterPct + '%';
       document.getElementById('water-fill').style.width = waterPct + '%';
+      document.getElementById('water-fill').style.background = gaugeColor(waterPct);
       document.getElementById('gauge-note').textContent =
         `必要食料: 約${requiredFood}食 ／ 必要水: 約${requiredWater}L`;
 
