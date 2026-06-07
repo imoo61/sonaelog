@@ -410,6 +410,15 @@
         <div class="gauge-bar">
           <div class="gauge-fill" id="water-fill" style="width:0%"></div>
         </div>
+        <div class="gauge-label" style="margin-top:10px">
+          <span>生活用水（L換算）</span>
+          <span style="text-align:right;">
+            <span id="utility-fraction" style="font-size:12px;color:#888;margin-right:6px;"></span><span id="utility-pct">0%</span>
+          </span>
+        </div>
+        <div class="gauge-bar">
+          <div class="gauge-fill" id="utility-fill" style="width:0%"></div>
+        </div>
         <div id="gauge-note" class="gauge-note">設定から家族構成を登録すると自動計算されます</div>
       </div>
 
@@ -464,6 +473,7 @@
           <select id="item-category" onchange="updateWaterOptions()">
             <option value="食料">食料</option>
             <option value="飲料">飲料</option>
+            <option value="生活用水">生活用水</option>
             <option value="衛生">衛生</option>
             <option value="ペット">ペット</option>
             <option value="道具">道具</option>
@@ -507,6 +517,7 @@
         <button class="tab active" onclick="switchTab('すべて', this)">すべて</button>
         <button class="tab" onclick="switchTab('食料', this)">食料</button>
         <button class="tab" onclick="switchTab('飲料', this)">飲料</button>
+        <button class="tab" onclick="switchTab('生活用水', this)">生活用水</button>
         <button class="tab" onclick="switchTab('衛生', this)">衛生</button>
         <button class="tab" onclick="switchTab('ペット', this)">ペット</button>
         <button class="tab" onclick="switchTab('道具', this)">道具</button>
@@ -603,7 +614,7 @@
   </nav>
 
   <script>
-    const VERSION = '2026.06.07-7';
+    const VERSION = '2026.06.07-8';
 
     document.getElementById('version-label').textContent = 'v' + VERSION;
     document.getElementById('version-date').textContent =
@@ -820,7 +831,20 @@
       document.getElementById('water-pct').textContent = waterPct + '%';
       document.getElementById('water-fill').style.width = waterPct + '%';
       document.getElementById('water-fill').style.background = gaugeColor(waterPct);
-      document.getElementById('gauge-note').textContent = `${days}日分の目安（1人1日3食・3L）`;
+
+      // 生活用水：1人1日10L
+      const requiredUtility = people * days * 10;
+      const actualUtility = items
+        .filter(i => i.category === '生活用水')
+        .reduce((sum, i) => sum + (i.bottleSize != null ? i.qty * i.bottleSize : i.qty), 0);
+      const utilityPct = requiredUtility > 0 ? Math.min(100, Math.round(actualUtility / requiredUtility * 100)) : 0;
+      const actualUtilityRounded = Math.round(actualUtility * 10) / 10;
+      document.getElementById('utility-fraction').textContent = `${actualUtilityRounded}L / ${requiredUtility}L`;
+      document.getElementById('utility-pct').textContent = utilityPct + '%';
+      document.getElementById('utility-fill').style.width = utilityPct + '%';
+      document.getElementById('utility-fill').style.background = gaugeColor(utilityPct);
+
+      document.getElementById('gauge-note').textContent = `${days}日分の目安（食料：1人1日3食 ／ 飲料：3L ／ 生活用水：10L）`;
 
       // 期限アラート（30日以内）
       const alertList = document.getElementById('alert-list');
@@ -849,7 +873,7 @@
       const name = document.getElementById('item-name').value;
       const category = document.getElementById('item-category').value;
       document.getElementById('water-options').style.display =
-        (name.includes('水') || category === '飲料') ? 'block' : 'none';
+        (name.includes('水') || category === '飲料' || category === '生活用水') ? 'block' : 'none';
     }
 
     document.getElementById('item-name').addEventListener('input', updateWaterOptions);
@@ -954,7 +978,7 @@
       const name = document.getElementById('item-name').value.trim();
       if (!name) { alert('品名を入力してください'); return; }
 
-      const isWater = name.includes('水') || document.getElementById('item-category').value === '飲料';
+      const isWater = name.includes('水') || ['飲料', '生活用水'].includes(document.getElementById('item-category').value);
       let bottleSize = null;
       if (isWater) {
         const sizeVal = document.getElementById('item-bottle-size').value;
