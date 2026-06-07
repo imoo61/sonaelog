@@ -495,8 +495,11 @@
           </select>
         </div>
         <div class="form-group">
-          <label>数量</label>
-          <input id="item-qty" type="number" value="1" min="1">
+          <label>数量・単位</label>
+          <div style="display:flex;gap:8px;">
+            <input id="item-qty" type="number" value="1" min="1" style="flex:1;">
+            <input id="item-unit" type="text" placeholder="個・kg・袋…" style="flex:1;font-size:16px;padding:12px 14px;border:1px solid #ddd;border-radius:8px;background:white;">
+          </div>
         </div>
         <div class="form-group">
           <label>賞味期限（任意）</label>
@@ -614,7 +617,7 @@
   </nav>
 
   <script>
-    const VERSION = '2026.06.07-8';
+    const VERSION = '2026.06.07-9';
 
     document.getElementById('version-label').textContent = 'v' + VERSION;
     document.getElementById('version-date').textContent =
@@ -921,7 +924,8 @@
         const sizeLabel = item.bottleSize < 1 ? `${item.bottleSize * 1000}ml` : `${item.bottleSize}L`;
         return `${item.qty}本（${sizeLabel}）計${totalL}L`;
       }
-      return `${item.qty}個`;
+      const unit = item.unit || '個';
+      return `${item.qty}${unit}`;
     }
 
     function badgeHtml(days) {
@@ -992,6 +996,7 @@
         category:   document.getElementById('item-category').value,
         location:   document.getElementById('item-location').value,
         qty:        parseInt(document.getElementById('item-qty').value) || 1,
+        unit:       document.getElementById('item-unit').value.trim(),
         bottleSize,
         expiry:     document.getElementById('item-expiry').value,
       };
@@ -1018,6 +1023,7 @@
       document.getElementById('item-category').value = item.category;
       document.getElementById('item-location').value = item.location || '玄関';
       document.getElementById('item-qty').value = item.qty;
+      document.getElementById('item-unit').value = item.unit || '';
       document.getElementById('item-expiry').value = item.expiry || defaultExpiryDate();
 
       updateWaterOptions();
@@ -1052,6 +1058,7 @@
       document.getElementById('item-name').value = '';
       document.getElementById('item-expiry').value = defaultExpiryDate();
       document.getElementById('item-qty').value = '1';
+      document.getElementById('item-unit').value = '';
       document.getElementById('item-category').value = '食料';
       document.getElementById('water-options').style.display = 'none';
       document.getElementById('item-bottle-size').value = '2';
