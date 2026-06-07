@@ -584,6 +584,36 @@
       </div>
 
       <div class="card">
+        <h3>生活用水の内訳</h3>
+        <p style="font-size:13px;color:#666;margin-bottom:12px;">含める用途にチェックを入れてください（1人1日あたり）</p>
+        <div id="utility-checks">
+          <label style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #f0f0f0;font-size:14px;">
+            <input type="checkbox" id="uw-toilet" value="5" style="width:20px;height:20px;accent-color:#2d6a4f;">
+            <span style="flex:1;">トイレ（バケツで流す）</span><span style="color:#888;font-size:13px;">約5L</span>
+          </label>
+          <label style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #f0f0f0;font-size:14px;">
+            <input type="checkbox" id="uw-wash" value="1.5" checked style="width:20px;height:20px;accent-color:#2d6a4f;">
+            <span style="flex:1;">手洗い・洗面</span><span style="color:#888;font-size:13px;">約1.5L</span>
+          </label>
+          <label style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #f0f0f0;font-size:14px;">
+            <input type="checkbox" id="uw-teeth" value="0.5" checked style="width:20px;height:20px;accent-color:#2d6a4f;">
+            <span style="flex:1;">歯磨き</span><span style="color:#888;font-size:13px;">約0.5L</span>
+          </label>
+          <label style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #f0f0f0;font-size:14px;">
+            <input type="checkbox" id="uw-dishes" value="1.5" checked style="width:20px;height:20px;accent-color:#2d6a4f;">
+            <span style="flex:1;">食器洗い</span><span style="color:#888;font-size:13px;">約1.5L</span>
+          </label>
+          <label style="display:flex;align-items:center;gap:10px;padding:8px 0;font-size:14px;">
+            <input type="checkbox" id="uw-wipe" value="1" checked style="width:20px;height:20px;accent-color:#2d6a4f;">
+            <span style="flex:1;">清拭（体を拭く）</span><span style="color:#888;font-size:13px;">約1L</span>
+          </label>
+        </div>
+        <div style="margin-top:12px;font-size:14px;font-weight:bold;color:#2d6a4f;">
+          1人1日の合計: <span id="utility-total-label">4.5L</span>
+        </div>
+      </div>
+
+      <div class="card">
         <h3>備蓄基準日数</h3>
         <div class="form-group">
           <label>何日分を100%とするか</label>
@@ -634,7 +664,7 @@
   </nav>
 
   <script>
-    const VERSION = '2026.06.07-19';
+    const VERSION = '2026.06.07-20';
 
     document.getElementById('version-label').textContent = 'v' + VERSION;
     document.getElementById('version-date').textContent =
@@ -781,6 +811,36 @@
       if (w > 0) document.getElementById('pet-feeding').value = Math.round(w * 10);
     }
 
+    const UTILITY_IDS = ['uw-toilet','uw-wash','uw-teeth','uw-dishes','uw-wipe'];
+
+    function getUtilityChecks() {
+      return UTILITY_IDS.reduce((obj, id) => {
+        obj[id] = document.getElementById(id).checked;
+        return obj;
+      }, {});
+    }
+
+    function setUtilityChecks(saved) {
+      UTILITY_IDS.forEach(id => {
+        if (id in saved) document.getElementById(id).checked = saved[id];
+      });
+    }
+
+    function calcUtilityPerDay() {
+      return UTILITY_IDS.reduce((sum, id) => {
+        const el = document.getElementById(id);
+        return el.checked ? sum + parseFloat(el.value) : sum;
+      }, 0);
+    }
+
+    function updateUtilityTotal() {
+      document.getElementById('utility-total-label').textContent = calcUtilityPerDay() + 'L';
+    }
+
+    UTILITY_IDS.forEach(id => {
+      document.getElementById(id).addEventListener('change', updateUtilityTotal);
+    });
+
     // 設定を保存
     function saveSettings() {
       const settings = {
@@ -788,8 +848,9 @@
         children:  parseInt(document.getElementById('children').value) || 0,
         petType:    document.getElementById('pet-type').value,
         petWeight:  parseFloat(document.getElementById('pet-weight').value) || 0,
-        petFeeding: parseInt(document.getElementById('pet-feeding').value) || 85,
-        baseDays:  parseInt(document.getElementById('base-days').value) || 7,
+        petFeeding:   parseInt(document.getElementById('pet-feeding').value) || 85,
+        baseDays:     parseInt(document.getElementById('base-days').value) || 7,
+        utilityItems: getUtilityChecks(),
       };
       localStorage.setItem('sonaelog-settings', JSON.stringify(settings));
 
@@ -811,6 +872,9 @@
       document.getElementById('pet-weight').value   = s.petWeight;
       document.getElementById('pet-feeding').value  = s.petFeeding || Math.round((s.petWeight || 8) * 10);
       document.getElementById('base-days').value   = s.baseDays;
+
+      if (s.utilityItems) setUtilityChecks(s.utilityItems);
+      updateUtilityTotal();
 
       if (s.petType === 'なし') {
         document.getElementById('pet-weight-group').style.display  = 'none';
@@ -862,8 +926,14 @@
       document.getElementById('water-fill').style.width = waterPct + '%';
       document.getElementById('water-fill').style.background = gaugeColor(waterPct);
 
-      // 生活用水：1人1日5L（手洗い・歯磨き・食器洗い・清拭。トイレ・入浴は除く）
-      const requiredUtility = people * days * 5;
+      // 生活用水：設定で選んだ用途の合計L/人/日
+      const utilityPerDay = s.utilityItems
+        ? UTILITY_IDS.reduce((sum, id) => {
+            const el = document.getElementById(id);
+            return s.utilityItems[id] && el ? sum + parseFloat(el.value) : sum;
+          }, 0)
+        : calcUtilityPerDay();
+      const requiredUtility = people * days * (utilityPerDay || 4.5);
       const actualUtility = items
         .filter(i => i.category === '生活用水')
         .reduce((sum, i) => sum + (i.bottleSize != null ? i.qty * i.bottleSize : i.qty), 0);
@@ -900,7 +970,7 @@
         petRow.style.display = 'none';
       }
 
-      document.getElementById('gauge-note').textContent = `${days}日分の目安（たべ物：1人1日3食 ／ のみ物：3L ／ 生活用水：5L）`;
+      document.getElementById('gauge-note').textContent = `${days}日分の目安（たべ物：1人1日3食 ／ のみ物：3L ／ 生活用水：${utilityPerDay || 4.5}L）`;
 
       // 期限アラート（30日以内）
       const alertList = document.getElementById('alert-list');
