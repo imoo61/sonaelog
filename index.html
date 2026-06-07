@@ -3,12 +3,12 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>備えログ</title>
+  <title>災害時の備蓄</title>
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#2d6a4f">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="備えログ">
+  <meta name="apple-mobile-web-app-title" content="備蓄管理">
   <link rel="apple-touch-icon" href="icon.svg">
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -29,7 +29,7 @@
     header {
       background: #2d6a4f;
       color: white;
-      padding: 16px 20px;
+      padding: calc(16px + env(safe-area-inset-top)) 20px 16px;
       display: flex;
       align-items: center;
       gap: 10px;
@@ -374,7 +374,7 @@
 
   <header>
     <span>🎒</span>
-    <h1>備えログ</h1>
+    <h1>災害時の備蓄</h1>
   </header>
 
   <main>
@@ -504,7 +504,7 @@
             <input id="item-unit" type="text" placeholder="個・kg・袋…" style="flex:1;font-size:16px;padding:12px 14px;border:1px solid #ddd;border-radius:8px;background:white;">
           </div>
         </div>
-        <div class="form-group">
+        <div id="expiry-group" class="form-group">
           <label>賞味期限（任意）</label>
           <input id="item-expiry" type="date">
         </div>
@@ -624,7 +624,7 @@
       <div class="card">
         <h3>ℹ️ バージョン情報</h3>
         <div style="display:flex;justify-content:space-between;align-items:center;font-size:14px;">
-          <span style="color:#555;">備えログ</span>
+          <span style="color:#555;">災害時の備蓄</span>
           <span id="version-label" style="font-weight:bold;color:#2d6a4f;font-size:16px;"></span>
         </div>
         <div id="version-date" style="font-size:12px;color:#aaa;margin-top:4px;"></div>
@@ -664,7 +664,7 @@
   </nav>
 
   <script>
-    const VERSION = '2026.06.07-20';
+    const VERSION = '2026.06.07-22';
 
     document.getElementById('version-label').textContent = 'v' + VERSION;
     document.getElementById('version-date').textContent =
@@ -757,7 +757,7 @@
         btn.style.background = '#aaa';
         btn.disabled = true;
         status.textContent = isStandalone()
-          ? '設定アプリ → 備えログ → 通知 → オン にしてください'
+          ? '設定アプリ → 備蓄管理 → 通知 → オン にしてください'
           : '設定アプリ → Safari → 詳細 → Webサイトの設定 から許可してください';
       }
     }
@@ -775,14 +775,14 @@
       const soonItems = items.filter(i => i.expiry && daysLeft(i.expiry) >= 0 && daysLeft(i.expiry) <= 7);
 
       if (expired.length > 0) {
-        new Notification('⚠️ 備えログ：期限切れの在庫があります', {
+        new Notification('⚠️ 期限切れの在庫があります', {
           body: expired.map(i => i.name).join('、') + ' が期限切れです',
           icon: './icon.svg',
           tag: 'sonaelog'
         });
         localStorage.setItem('sonaelog-notified-date', today);
       } else if (soonItems.length > 0) {
-        new Notification('📅 備えログ：期限が近い在庫があります', {
+        new Notification('📅 期限が近い在庫があります', {
           body: soonItems.map(i => `${i.name}（あと${daysLeft(i.expiry)}日）`).join('、'),
           icon: './icon.svg',
           tag: 'sonaelog'
@@ -995,11 +995,16 @@
       }
     }
 
+    const NO_EXPIRY_CATEGORIES = ['生活用水', '衛生', '道具'];
+
     function updateWaterOptions() {
       const name = document.getElementById('item-name').value;
       const category = document.getElementById('item-category').value;
       document.getElementById('water-options').style.display =
         (name.includes('水') || category === 'のみ物' || category === '生活用水') ? 'block' : 'none';
+      const hideExpiry = NO_EXPIRY_CATEGORIES.includes(category);
+      document.getElementById('expiry-group').style.display = hideExpiry ? 'none' : 'block';
+      if (hideExpiry) document.getElementById('item-expiry').value = '';
     }
 
     document.getElementById('item-name').addEventListener('input', updateWaterOptions);
@@ -1147,7 +1152,7 @@
       document.getElementById('item-location').value = item.location || '玄関';
       document.getElementById('item-qty').value = item.qty;
       document.getElementById('item-unit').value = item.unit || '';
-      document.getElementById('item-expiry').value = item.expiry || defaultExpiryDate();
+      document.getElementById('item-expiry').value = NO_EXPIRY_CATEGORIES.includes(item.category) ? '' : (item.expiry || '');
 
       updateWaterOptions();
       if (item.bottleSize != null) {
@@ -1320,7 +1325,7 @@
       const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
       const a = document.createElement('a');
       a.href = URL.createObjectURL(blob);
-      a.download = `備えログ_${new Date().toISOString().slice(0,10)}.json`;
+      a.download = `備蓄管理_${new Date().toISOString().slice(0,10)}.json`;
       a.click();
     }
 

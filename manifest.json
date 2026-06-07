@@ -1,6 +1,6 @@
 {
-  "name": "備えログ",
-  "short_name": "備えログ",
+  "name": "災害時の備蓄",
+  "short_name": "備蓄管理",
   "description": "家族の防災備蓄を管理するアプリ",
   "start_url": "./index.html",
   "display": "standalone",
