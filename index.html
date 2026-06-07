@@ -1,0 +1,933 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>備えログ</title>
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#2d6a4f">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="備えログ">
+  <link rel="apple-touch-icon" href="icon.svg">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Hiragino Sans', 'Meiryo', sans-serif;
+      background: #f5f5f0;
+      color: #333;
+      max-width: 480px;
+      margin: 0 auto;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ヘッダー */
+    header {
+      background: #2d6a4f;
+      color: white;
+      padding: 16px 20px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    header h1 { font-size: 20px; font-weight: bold; }
+    header span { font-size: 22px; }
+
+    /* メインコンテンツ */
+    main {
+      flex: 1;
+      padding: 20px;
+    }
+
+    /* 画面（デフォルトは非表示） */
+    .screen { display: none; }
+    .screen.active { display: block; }
+
+    /* セクションタイトル */
+    .section-title {
+      font-size: 18px;
+      font-weight: bold;
+      color: #2d6a4f;
+      margin-bottom: 16px;
+      padding-bottom: 8px;
+      border-bottom: 2px solid #2d6a4f;
+    }
+
+    /* カード */
+    .card {
+      background: white;
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 16px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+    .card h3 {
+      font-size: 15px;
+      color: #555;
+      margin-bottom: 12px;
+    }
+
+    /* ダッシュボード：充足率ゲージ（仮） */
+    .gauge-label {
+      display: flex;
+      justify-content: space-between;
+      font-size: 14px;
+      margin-bottom: 6px;
+    }
+    .gauge-bar {
+      background: #e0e0e0;
+      border-radius: 8px;
+      height: 20px;
+      overflow: hidden;
+    }
+    .gauge-fill {
+      background: linear-gradient(90deg, #2d6a4f, #52b788);
+      height: 100%;
+      border-radius: 8px;
+      width: 40%;
+      transition: width 0.5s ease;
+    }
+    .gauge-note {
+      font-size: 12px;
+      color: #888;
+      margin-top: 6px;
+    }
+
+    /* 警告バッジ */
+    .alert-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 0;
+      border-bottom: 1px solid #f0f0f0;
+      font-size: 14px;
+    }
+    .alert-item:last-child { border-bottom: none; }
+    .badge {
+      font-size: 11px;
+      padding: 3px 8px;
+      border-radius: 20px;
+      font-weight: bold;
+    }
+    .badge.danger { background: #fde8e8; color: #e53e3e; }
+    .badge.warning { background: #fef3cd; color: #d69e2e; }
+
+    /* 在庫リスト：カテゴリタブ */
+    .tabs {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+    }
+    .tab {
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-size: 13px;
+      border: none;
+      cursor: pointer;
+      background: #e0e0e0;
+      color: #555;
+      transition: all 0.2s;
+    }
+    .tab.active {
+      background: #2d6a4f;
+      color: white;
+    }
+
+    /* 在庫アイテム（仮） */
+    .stock-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 0;
+      border-bottom: 1px solid #f0f0f0;
+      font-size: 14px;
+    }
+    .stock-item:last-child { border-bottom: none; }
+    .stock-name { font-weight: bold; }
+    .stock-meta { font-size: 12px; color: #888; margin-top: 2px; }
+
+    /* 設定フォーム（仮） */
+    .form-group { margin-bottom: 20px; }
+    .form-group label {
+      display: block;
+      font-size: 14px;
+      font-weight: bold;
+      color: #555;
+      margin-bottom: 6px;
+    }
+    .form-group input, .form-group select {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      font-size: 14px;
+      background: white;
+    }
+
+    /* エクスポートボタン */
+    #export-btn {
+      width: 100%;
+      padding: 12px;
+      background: white;
+      color: #2d6a4f;
+      border: 2px solid #2d6a4f;
+      border-radius: 10px;
+      font-size: 14px;
+      font-weight: bold;
+      cursor: pointer;
+      margin-bottom: 16px;
+    }
+    #export-btn:active { background: #e8f5e9; }
+
+    /* 追加・保存ボタン共通 */
+    #add-btn {
+      width: 100%;
+      padding: 12px;
+      background: #52b788;
+      color: white;
+      border: none;
+      border-radius: 10px;
+      font-size: 15px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    #add-btn:active { background: #3a8f6a; }
+
+    /* 削除ボタン */
+    .delete-btn {
+      background: none;
+      border: none;
+      color: #ccc;
+      font-size: 18px;
+      cursor: pointer;
+      padding: 4px;
+    }
+    .delete-btn:hover { color: #e53e3e; }
+
+    /* ビュー切り替えトグル */
+    .view-toggle {
+      display: flex;
+      background: #e8f5e9;
+      border-radius: 20px;
+      padding: 3px;
+      margin-bottom: 16px;
+    }
+    .view-toggle-btn {
+      flex: 1;
+      padding: 7px 0;
+      border: none;
+      background: transparent;
+      border-radius: 17px;
+      font-size: 13px;
+      cursor: pointer;
+      color: #555;
+      transition: all 0.2s;
+    }
+    .view-toggle-btn.active {
+      background: #2d6a4f;
+      color: white;
+      font-weight: bold;
+    }
+
+    /* 場所別グループカード */
+    .location-group {
+      background: white;
+      border-radius: 12px;
+      padding: 16px 20px;
+      margin-bottom: 12px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+    .location-group-header {
+      font-size: 15px;
+      font-weight: bold;
+      color: #2d6a4f;
+      margin-bottom: 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .location-count {
+      font-size: 12px;
+      color: #888;
+      font-weight: normal;
+    }
+
+    /* 水専用オプション */
+    #water-options {
+      background: #e8f4ff;
+      border-radius: 8px;
+      padding: 12px 14px;
+      margin-bottom: 16px;
+      border-left: 3px solid #4a9eda;
+    }
+    #water-options .form-group { margin-bottom: 10px; }
+    #water-options .form-group:last-child { margin-bottom: 0; }
+    #water-options label { color: #2c6fa0; }
+
+    /* 保存ボタン */
+    #save-btn {
+      width: 100%;
+      padding: 14px;
+      background: #2d6a4f;
+      color: white;
+      border: none;
+      border-radius: 10px;
+      font-size: 16px;
+      font-weight: bold;
+      cursor: pointer;
+      margin-bottom: 8px;
+    }
+    #save-btn:active { background: #1e4d38; }
+
+    /* ボトムナビ */
+    nav {
+      background: white;
+      border-top: 1px solid #e0e0e0;
+      display: flex;
+      position: sticky;
+      bottom: 0;
+    }
+    .nav-btn {
+      flex: 1;
+      padding: 12px 0;
+      border: none;
+      background: transparent;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      font-size: 11px;
+      color: #888;
+      transition: color 0.2s;
+    }
+    .nav-btn span.icon { font-size: 22px; }
+    .nav-btn.active { color: #2d6a4f; font-weight: bold; }
+  </style>
+</head>
+<body>
+
+  <header>
+    <span>🎒</span>
+    <h1>備えログ</h1>
+  </header>
+
+  <main>
+
+    <!-- ダッシュボード -->
+    <div id="screen-dashboard" class="screen active">
+      <div class="section-title">ダッシュボード</div>
+
+      <!-- 充足率ゲージ -->
+      <div class="card">
+        <h3 id="gauge-title">備蓄充足率（7日分基準）</h3>
+        <div class="gauge-label">
+          <span>食料</span>
+          <span id="food-pct">0%</span>
+        </div>
+        <div class="gauge-bar">
+          <div class="gauge-fill" id="food-fill" style="width:0%"></div>
+        </div>
+        <div class="gauge-label" style="margin-top:10px">
+          <span>水（2Lボトル換算）</span>
+          <span id="water-pct">0%</span>
+        </div>
+        <div class="gauge-bar">
+          <div class="gauge-fill" id="water-fill" style="width:0%"></div>
+        </div>
+        <div id="gauge-note" class="gauge-note">設定から家族構成を登録すると自動計算されます</div>
+      </div>
+
+      <!-- 期限アラート -->
+      <div class="card">
+        <h3>⚠️ 期限が近いもの（30日以内）</h3>
+        <div id="alert-list">
+          <div style="text-align:center;color:#aaa;font-size:14px;padding:12px 0;">
+            該当する在庫はありません
+          </div>
+        </div>
+      </div>
+
+      <!-- エクスポート -->
+      <button id="export-btn" onclick="exportJSON()">📥 データをエクスポート（JSON）</button>
+    </div>
+
+    <!-- 在庫リスト -->
+    <div id="screen-inventory" class="screen">
+      <div class="section-title">在庫リスト</div>
+
+      <!-- 追加フォーム -->
+      <div class="card">
+        <h3>➕ 在庫を追加</h3>
+        <div class="form-group">
+          <label>品名</label>
+          <input id="item-name" type="text" placeholder="例: 缶詰（さば味噌）">
+        </div>
+
+        <!-- 水アイテム用オプション（名前に「水」が含まれると表示） -->
+        <div id="water-options" style="display:none;">
+          <div class="form-group">
+            <label>💧 容量（1本あたり）</label>
+            <select id="item-bottle-size" onchange="toggleCustomVolume(this)">
+              <option value="0.5">500ml</option>
+              <option value="1">1L</option>
+              <option value="2" selected>2L</option>
+              <option value="custom">その他（直接入力）</option>
+            </select>
+          </div>
+          <div id="custom-volume-group" style="display:none;" class="form-group">
+            <label>容量（L）</label>
+            <input id="item-custom-volume" type="number" value="1" min="0.1" step="0.1" placeholder="例: 4">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>カテゴリ</label>
+          <select id="item-category">
+            <option value="食料">食料</option>
+            <option value="衛生">衛生</option>
+            <option value="ペット">ペット</option>
+            <option value="道具">道具</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>保管場所</label>
+          <select id="item-location">
+            <option value="玄関">🚪 玄関</option>
+            <option value="リビング">🛋 リビング</option>
+            <option value="キッチン">🍳 キッチン</option>
+            <option value="寝室">🛏 寝室</option>
+            <option value="押し入れ">📦 押し入れ・クローゼット</option>
+            <option value="物置">🏠 物置・ガレージ</option>
+            <option value="車">🚗 車</option>
+            <option value="勝手口">🚪 勝手口</option>
+            <option value="天井裏">🏗 天井裏</option>
+            <option value="その他">📍 その他</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>数量</label>
+          <input id="item-qty" type="number" value="1" min="1">
+        </div>
+        <div class="form-group">
+          <label>賞味期限（任意）</label>
+          <input id="item-expiry" type="date">
+        </div>
+        <button id="add-btn" onclick="addItem()">追加する</button>
+      </div>
+
+      <!-- ビュー切り替え -->
+      <div class="view-toggle">
+        <button class="view-toggle-btn active" onclick="switchView('category', this)">カテゴリ別</button>
+        <button class="view-toggle-btn" onclick="switchView('location', this)">場所別</button>
+      </div>
+
+      <!-- カテゴリタブ（カテゴリ別ビュー時のみ表示） -->
+      <div class="tabs" id="category-tabs">
+        <button class="tab active" onclick="switchTab('すべて', this)">すべて</button>
+        <button class="tab" onclick="switchTab('食料', this)">食料</button>
+        <button class="tab" onclick="switchTab('衛生', this)">衛生</button>
+        <button class="tab" onclick="switchTab('ペット', this)">ペット</button>
+        <button class="tab" onclick="switchTab('道具', this)">道具</button>
+      </div>
+
+      <!-- 在庫一覧（カテゴリ別） -->
+      <div class="card" id="stock-list">
+        <div id="empty-msg" style="text-align:center;color:#aaa;font-size:14px;padding:20px 0;">
+          在庫がありません。上のフォームから追加してください。
+        </div>
+      </div>
+
+      <!-- 場所別ビュー -->
+      <div id="location-view" style="display:none;"></div>
+    </div>
+
+    <!-- 設定 -->
+    <div id="screen-settings" class="screen">
+      <div class="section-title">設定</div>
+
+      <div class="card">
+        <h3>家族構成</h3>
+        <div class="form-group">
+          <label>大人の人数</label>
+          <input id="adults" type="number" value="2" min="1">
+        </div>
+        <div class="form-group">
+          <label>子供の人数</label>
+          <input id="children" type="number" value="2" min="0">
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>ペット情報</h3>
+        <div class="form-group">
+          <label>種類</label>
+          <select id="pet-type">
+            <option value="なし">なし</option>
+            <option value="犬">犬</option>
+            <option value="猫">猫</option>
+            <option value="その他">その他</option>
+          </select>
+        </div>
+        <div class="form-group" id="pet-weight-group">
+          <label>体重（kg）</label>
+          <input id="pet-weight" type="number" value="8" min="0" step="0.1">
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>備蓄基準日数</h3>
+        <div class="form-group">
+          <label>何日分を100%とするか</label>
+          <input id="base-days" type="number" value="7" min="1">
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>🔔 通知設定</h3>
+        <p style="font-size:13px;color:#666;margin-bottom:12px;">アプリを開いたとき、期限が7日以内の在庫をお知らせします</p>
+        <button id="notif-btn" onclick="requestNotificationPermission()" style="width:100%;padding:11px;background:#4a9eda;color:white;border:none;border-radius:10px;font-size:14px;font-weight:bold;cursor:pointer;">通知を有効にする</button>
+        <div id="notif-status" style="margin-top:8px;font-size:13px;text-align:center;color:#666;"></div>
+      </div>
+
+      <button id="save-btn" onclick="saveSettings()">保存する</button>
+      <div id="save-msg" style="display:none;text-align:center;color:#2d6a4f;margin-top:10px;font-size:14px;">✅ 保存しました</div>
+    </div>
+
+  </main>
+
+  <!-- ボトムナビ -->
+  <nav>
+    <button class="nav-btn active" onclick="showScreen('dashboard', this)">
+      <span class="icon">🏠</span>
+      ホーム
+    </button>
+    <button class="nav-btn" onclick="showScreen('inventory', this)">
+      <span class="icon">📦</span>
+      在庫
+    </button>
+    <button class="nav-btn" onclick="showScreen('settings', this)">
+      <span class="icon">⚙️</span>
+      設定
+    </button>
+  </nav>
+
+  <script>
+    // Service Worker 登録
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('./sw.js');
+    }
+
+    // 通知許可をリクエスト
+    async function requestNotificationPermission() {
+      if (!('Notification' in window)) {
+        document.getElementById('notif-status').textContent = '⚠️ このブラウザは通知に対応していません';
+        return;
+      }
+      const permission = await Notification.requestPermission();
+      updateNotifStatus(permission);
+    }
+
+    function updateNotifStatus(permission) {
+      const btn = document.getElementById('notif-btn');
+      const status = document.getElementById('notif-status');
+      if (permission === 'granted') {
+        btn.textContent = '✅ 通知は有効です';
+        btn.style.background = '#2d6a4f';
+        btn.disabled = true;
+        status.textContent = 'アプリを開くたびに期限チェックします';
+      } else if (permission === 'denied') {
+        btn.textContent = '🚫 通知がブロックされています';
+        btn.style.background = '#aaa';
+        btn.disabled = true;
+        status.textContent = 'ブラウザの設定から許可してください';
+      }
+    }
+
+    // 期限チェックして通知
+    function checkExpiryNotifications() {
+      if (!('Notification' in window) || Notification.permission !== 'granted') return;
+
+      // 同日に複数回通知しない
+      const today = new Date().toDateString();
+      if (localStorage.getItem('sonaelog-notified-date') === today) return;
+
+      const items = loadItems();
+      const expired   = items.filter(i => i.expiry && daysLeft(i.expiry) < 0);
+      const soonItems = items.filter(i => i.expiry && daysLeft(i.expiry) >= 0 && daysLeft(i.expiry) <= 7);
+
+      if (expired.length > 0) {
+        new Notification('⚠️ 備えログ：期限切れの在庫があります', {
+          body: expired.map(i => i.name).join('、') + ' が期限切れです',
+          icon: './icon.svg',
+          tag: 'sonaelog'
+        });
+        localStorage.setItem('sonaelog-notified-date', today);
+      } else if (soonItems.length > 0) {
+        new Notification('📅 備えログ：期限が近い在庫があります', {
+          body: soonItems.map(i => `${i.name}（あと${daysLeft(i.expiry)}日）`).join('、'),
+          icon: './icon.svg',
+          tag: 'sonaelog'
+        });
+        localStorage.setItem('sonaelog-notified-date', today);
+      }
+    }
+
+    function showScreen(name, btn) {
+      document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+      document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+      document.getElementById('screen-' + name).classList.add('active');
+      btn.classList.add('active');
+    }
+
+    // ペット種類が「なし」のとき体重欄を非表示
+    document.getElementById('pet-type').addEventListener('change', function() {
+      document.getElementById('pet-weight-group').style.display =
+        this.value === 'なし' ? 'none' : 'block';
+    });
+
+    // 設定を保存
+    function saveSettings() {
+      const settings = {
+        adults:    parseInt(document.getElementById('adults').value) || 2,
+        children:  parseInt(document.getElementById('children').value) || 0,
+        petType:   document.getElementById('pet-type').value,
+        petWeight: parseFloat(document.getElementById('pet-weight').value) || 0,
+        baseDays:  parseInt(document.getElementById('base-days').value) || 7,
+      };
+      localStorage.setItem('sonaelog-settings', JSON.stringify(settings));
+
+      const msg = document.getElementById('save-msg');
+      msg.style.display = 'block';
+      setTimeout(() => msg.style.display = 'none', 2000);
+
+      updateDashboard(settings);
+    }
+
+    // 設定を読み込んでフォームに反映
+    function loadSettings() {
+      const raw = localStorage.getItem('sonaelog-settings');
+      if (!raw) return;
+      const s = JSON.parse(raw);
+      document.getElementById('adults').value      = s.adults;
+      document.getElementById('children').value    = s.children;
+      document.getElementById('pet-type').value    = s.petType;
+      document.getElementById('pet-weight').value  = s.petWeight;
+      document.getElementById('base-days').value   = s.baseDays;
+
+      if (s.petType === 'なし') {
+        document.getElementById('pet-weight-group').style.display = 'none';
+      }
+
+      updateDashboard(s);
+    }
+
+    // ダッシュボードを実データで更新
+    function updateDashboard(s) {
+      const days = s.baseDays || 7;
+      const adults = s.adults || 2;
+      const children = s.children || 0;
+      const people = adults + children;
+
+      document.getElementById('gauge-title').textContent = `備蓄充足率（${days}日分基準）`;
+
+      const items = loadItems();
+
+      // 食料：1人1日3食として必要アイテム数を計算
+      const requiredFood = people * days * 3;
+      const actualFood = items
+        .filter(i => i.category === '食料')
+        .reduce((sum, i) => sum + i.qty, 0);
+      const foodPct = requiredFood > 0 ? Math.min(100, Math.round(actualFood / requiredFood * 100)) : 0;
+
+      // 水：1人1日3L
+      const requiredWater = people * days * 3;
+      const actualWater = items
+        .filter(i => i.category === '食料' && i.name.includes('水'))
+        .reduce((sum, i) => sum + (i.bottleSize != null ? i.qty * i.bottleSize : i.qty), 0);
+      const waterPct = requiredWater > 0 ? Math.min(100, Math.round(actualWater / requiredWater * 100)) : 0;
+
+      document.getElementById('food-pct').textContent = foodPct + '%';
+      document.getElementById('food-fill').style.width = foodPct + '%';
+      document.getElementById('water-pct').textContent = waterPct + '%';
+      document.getElementById('water-fill').style.width = waterPct + '%';
+      document.getElementById('gauge-note').textContent =
+        `必要食料: 約${requiredFood}食 ／ 必要水: 約${requiredWater}L`;
+
+      // 期限アラート（30日以内）
+      const alertList = document.getElementById('alert-list');
+      const expiring = items
+        .filter(i => i.expiry && daysLeft(i.expiry) !== null && daysLeft(i.expiry) <= 30)
+        .sort((a, b) => new Date(a.expiry) - new Date(b.expiry));
+
+      if (expiring.length === 0) {
+        alertList.innerHTML = `<div style="text-align:center;color:#aaa;font-size:14px;padding:12px 0;">該当する在庫はありません</div>`;
+      } else {
+        alertList.innerHTML = expiring.map(item => {
+          const days2 = daysLeft(item.expiry);
+          return `
+            <div class="alert-item">
+              <div>
+                <div>${item.name}</div>
+                <div style="font-size:12px;color:#888;">${item.qty}個 ／ ${item.category}</div>
+              </div>
+              ${badgeHtml(days2)}
+            </div>`;
+        }).join('');
+      }
+    }
+
+    // 品名に「水」が含まれたら水オプションを表示
+    document.getElementById('item-name').addEventListener('input', function() {
+      document.getElementById('water-options').style.display =
+        this.value.includes('水') ? 'block' : 'none';
+    });
+
+    function toggleCustomVolume(sel) {
+      document.getElementById('custom-volume-group').style.display =
+        sel.value === 'custom' ? 'block' : 'none';
+    }
+
+    // ページ読み込み時に設定を復元
+    loadSettings();
+
+    // 通知ステータスを反映・期限チェック
+    if ('Notification' in window) {
+      updateNotifStatus(Notification.permission);
+      checkExpiryNotifications();
+    }
+
+    // ---- 在庫管理 ----
+    let currentTab = 'すべて';
+    let currentView = 'category';
+
+    const LOCATION_ICONS = { '玄関': '🚪', 'リビング': '🛋', 'キッチン': '🍳', '寝室': '🛏', '押し入れ': '📦', '物置': '🏠', '車': '🚗', '勝手口': '🚪', '天井裏': '🏗', 'その他': '📍' };
+    const LOCATION_ORDER = ['玄関', '勝手口', 'リビング', 'キッチン', '寝室', '押し入れ', '物置', '天井裏', '車', 'その他'];
+    function locationIcon(loc) { return LOCATION_ICONS[loc] || '📍'; }
+
+    function loadItems() {
+      return JSON.parse(localStorage.getItem('sonaelog-items') || '[]');
+    }
+
+    function saveItems(items) {
+      localStorage.setItem('sonaelog-items', JSON.stringify(items));
+    }
+
+    function daysLeft(expiryStr) {
+      if (!expiryStr) return null;
+      const diff = new Date(expiryStr) - new Date();
+      return Math.ceil(diff / (1000 * 60 * 60 * 24));
+    }
+
+    function qtyLabel(item) {
+      if (item.name.includes('水') && item.bottleSize != null) {
+        const totalL = item.qty * item.bottleSize;
+        const sizeLabel = item.bottleSize < 1 ? `${item.bottleSize * 1000}ml` : `${item.bottleSize}L`;
+        return `${item.qty}本（${sizeLabel}）計${totalL}L`;
+      }
+      if (item.name.includes('水')) return `${item.qty}L`;
+      return `${item.qty}個`;
+    }
+
+    function badgeHtml(days) {
+      if (days === null) return '';
+      if (days < 0)  return `<span class="badge danger">期限切れ</span>`;
+      if (days <= 7) return `<span class="badge danger">あと${days}日</span>`;
+      if (days <= 30) return `<span class="badge warning">あと${days}日</span>`;
+      return `<span class="badge" style="background:#e8f5e9;color:#2d6a4f;">余裕あり</span>`;
+    }
+
+    function renderItems() {
+      const items = loadItems()
+        .filter(i => currentTab === 'すべて' || i.category === currentTab)
+        .sort((a, b) => {
+          if (!a.expiry) return 1;
+          if (!b.expiry) return -1;
+          return new Date(a.expiry) - new Date(b.expiry);
+        });
+
+      const list = document.getElementById('stock-list');
+      const empty = document.getElementById('empty-msg');
+
+      const existing = list.querySelectorAll('.stock-item');
+      existing.forEach(e => e.remove());
+
+      if (items.length === 0) {
+        empty.style.display = 'block';
+        return;
+      }
+      empty.style.display = 'none';
+
+      items.forEach(item => {
+        const days = daysLeft(item.expiry);
+        const div = document.createElement('div');
+        div.className = 'stock-item';
+        div.innerHTML = `
+          <div style="flex:1">
+            <div class="stock-name">${item.name}</div>
+            <div class="stock-meta">
+              ${item.category} ／ ${qtyLabel(item)}
+              ${item.location ? ' ／ ' + locationIcon(item.location) + item.location : ''}
+              ${item.expiry ? '／ 期限: ' + item.expiry : ''}
+            </div>
+          </div>
+          ${badgeHtml(days)}
+          <button class="delete-btn" onclick="deleteItem('${item.id}')">🗑</button>
+        `;
+        list.appendChild(div);
+      });
+    }
+
+    function addItem() {
+      const name = document.getElementById('item-name').value.trim();
+      if (!name) { alert('品名を入力してください'); return; }
+
+      const isWater = name.includes('水');
+      let bottleSize = null;
+      if (isWater) {
+        const sizeVal = document.getElementById('item-bottle-size').value;
+        bottleSize = sizeVal === 'custom'
+          ? parseFloat(document.getElementById('item-custom-volume').value) || 1
+          : parseFloat(sizeVal);
+      }
+
+      const items = loadItems();
+      items.push({
+        id:         Date.now().toString(),
+        name:       name,
+        category:   document.getElementById('item-category').value,
+        location:   document.getElementById('item-location').value,
+        qty:        parseInt(document.getElementById('item-qty').value) || 1,
+        bottleSize: bottleSize,
+        expiry:     document.getElementById('item-expiry').value,
+      });
+      saveItems(items);
+
+      document.getElementById('item-name').value = '';
+      document.getElementById('item-expiry').value = '';
+      document.getElementById('item-qty').value = '1';
+      document.getElementById('water-options').style.display = 'none';
+      document.getElementById('item-bottle-size').value = '2';
+      document.getElementById('custom-volume-group').style.display = 'none';
+
+      if (currentView === 'location') renderByLocation(); else renderItems();
+    }
+
+    function deleteItem(id) {
+      const items = loadItems().filter(i => i.id !== id);
+      saveItems(items);
+      if (currentView === 'location') renderByLocation(); else renderItems();
+    }
+
+    function switchTab(tab, btn) {
+      currentTab = tab;
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      btn.classList.add('active');
+      renderItems();
+    }
+
+    function switchView(view, btn) {
+      currentView = view;
+      document.querySelectorAll('.view-toggle-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+
+      const tabs = document.getElementById('category-tabs');
+      const stockList = document.getElementById('stock-list');
+      const locationView = document.getElementById('location-view');
+
+      if (view === 'category') {
+        tabs.style.display = 'flex';
+        stockList.style.display = 'block';
+        locationView.style.display = 'none';
+        renderItems();
+      } else {
+        tabs.style.display = 'none';
+        stockList.style.display = 'none';
+        locationView.style.display = 'block';
+        renderByLocation();
+      }
+    }
+
+    function renderByLocation() {
+      const allItems = loadItems();
+      const container = document.getElementById('location-view');
+
+      if (allItems.length === 0) {
+        container.innerHTML = `<div class="card" style="text-align:center;color:#aaa;font-size:14px;padding:20px 0;">在庫がありません。上のフォームから追加してください。</div>`;
+        return;
+      }
+
+      const grouped = {};
+      allItems.forEach(item => {
+        const loc = item.location || 'その他';
+        if (!grouped[loc]) grouped[loc] = [];
+        grouped[loc].push(item);
+      });
+
+      const sortedLocs = Object.keys(grouped).sort((a, b) => {
+        const ai = LOCATION_ORDER.indexOf(a);
+        const bi = LOCATION_ORDER.indexOf(b);
+        return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi);
+      });
+
+      container.innerHTML = sortedLocs.map(loc => {
+        const items = grouped[loc].sort((a, b) => {
+          if (!a.expiry) return 1;
+          if (!b.expiry) return -1;
+          return new Date(a.expiry) - new Date(b.expiry);
+        });
+        const totalQty = items.reduce((s, i) => s + i.qty, 0);
+
+        return `
+          <div class="location-group">
+            <div class="location-group-header">
+              <span>${locationIcon(loc)} ${loc}</span>
+              <span class="location-count">${items.length}種 ／ 計${totalQty}個</span>
+            </div>
+            ${items.map(item => {
+              const days = daysLeft(item.expiry);
+              return `
+                <div class="stock-item">
+                  <div style="flex:1">
+                    <div class="stock-name">${item.name}</div>
+                    <div class="stock-meta">${item.category} ／ ${qtyLabel(item)}${item.expiry ? ' ／ 期限: ' + item.expiry : ''}</div>
+                  </div>
+                  ${badgeHtml(days)}
+                  <button class="delete-btn" onclick="deleteItem('${item.id}')">🗑</button>
+                </div>`;
+            }).join('')}
+          </div>`;
+      }).join('');
+    }
+
+    renderItems();
+
+    // 在庫変更時にダッシュボードも再描画
+    const _origSaveItems = saveItems;
+    saveItems = function(items) {
+      _origSaveItems(items);
+      const raw = localStorage.getItem('sonaelog-settings');
+      if (raw) updateDashboard(JSON.parse(raw));
+    };
+
+    // JSONエクスポート
+    function exportJSON() {
+      const data = {
+        settings:   JSON.parse(localStorage.getItem('sonaelog-settings') || '{}'),
+        items:      loadItems(),
+        exportedAt: new Date().toLocaleString('ja-JP'),
+      };
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `備えログ_${new Date().toISOString().slice(0,10)}.json`;
+      a.click();
+    }
+  </script>
+
+</body>
+</html>
