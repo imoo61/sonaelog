@@ -235,6 +235,29 @@
     .card.editing h3 { color: #2d6a4f; }
 
     /* キャンセルボタン */
+    /* 通知ボタン */
+    #notif-btn {
+      width: 100%;
+      padding: 14px;
+      background: #4a9eda;
+      color: white;
+      border: none;
+      border-radius: 10px;
+      font-size: 16px;
+      font-weight: bold;
+      cursor: pointer;
+      touch-action: manipulation;
+    }
+    #notif-btn:active { opacity: 0.85; }
+    #notif-btn:disabled { opacity: 0.7; cursor: default; }
+    #notif-status {
+      margin-top: 8px;
+      font-size: 13px;
+      text-align: center;
+      color: #666;
+      line-height: 1.5;
+    }
+
     #cancel-edit-btn {
       width: 100%;
       padding: 11px;
@@ -549,8 +572,8 @@
       <div class="card">
         <h3>🔔 通知設定</h3>
         <p style="font-size:13px;color:#666;margin-bottom:12px;">アプリを開いたとき、期限が7日以内の在庫をお知らせします</p>
-        <button id="notif-btn" onclick="requestNotificationPermission()" style="width:100%;padding:11px;background:#4a9eda;color:white;border:none;border-radius:10px;font-size:14px;font-weight:bold;cursor:pointer;">通知を有効にする</button>
-        <div id="notif-status" style="margin-top:8px;font-size:13px;text-align:center;color:#666;"></div>
+        <button id="notif-btn" onclick="requestNotificationPermission()">通知を有効にする</button>
+        <div id="notif-status"></div>
       </div>
 
       <button id="save-btn" onclick="saveSettings()">保存する</button>
@@ -576,22 +599,54 @@
   </nav>
 
   <script>
-    const VERSION = '2026.06.07';
+    const VERSION = '2026.06.07-4';
 
     document.getElementById('version-label').textContent = 'v' + VERSION;
-    document.getElementById('version-date').textContent = '最終更新: ' + VERSION.replace(/\./g, '/');
+    document.getElementById('version-date').textContent =
+      '最終更新: ' + VERSION.split('-')[0].replace(/\./g, '/') +
+      '（rev.' + (VERSION.split('-')[1] || '1') + '）';
 
     // Service Worker 登録
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('./sw.js');
     }
 
+    function isiOS() {
+      return /iP(hone|ad|od)/.test(navigator.userAgent);
+    }
+    function isStandalone() {
+      return window.navigator.standalone === true ||
+             window.matchMedia('(display-mode: standalone)').matches;
+    }
+
     // 通知許可をリクエスト
     async function requestNotificationPermission() {
+      const btn = document.getElementById('notif-btn');
+      const status = document.getElementById('notif-status');
+
       if (!('Notification' in window)) {
-        document.getElementById('notif-status').textContent = '⚠️ このブラウザは通知に対応していません';
+        if (isiOS()) {
+          btn.textContent = '⚠️ 未対応';
+          btn.style.background = '#aaa';
+          btn.disabled = true;
+          status.textContent = 'iOS 16.4以上でホーム画面に追加したアプリのみ通知に対応しています';
+        } else {
+          btn.textContent = '⚠️ 未対応';
+          btn.style.background = '#aaa';
+          btn.disabled = true;
+          status.textContent = 'このブラウザは通知に対応していません';
+        }
         return;
       }
+
+      if (isiOS() && !isStandalone()) {
+        btn.textContent = '📱 ホーム画面から起動してください';
+        btn.style.background = '#aaa';
+        btn.disabled = true;
+        status.textContent = 'Safariの「ホーム画面に追加」でインストール後、アプリから設定してください';
+        return;
+      }
+
       const permission = await Notification.requestPermission();
       updateNotifStatus(permission);
     }
@@ -599,6 +654,29 @@
     function updateNotifStatus(permission) {
       const btn = document.getElementById('notif-btn');
       const status = document.getElementById('notif-status');
+
+      if (!('Notification' in window)) {
+        if (isiOS() && !isStandalone()) {
+          btn.textContent = '📱 ホーム画面から起動してください';
+          btn.style.background = '#aaa';
+          btn.disabled = true;
+          status.textContent = 'Safariの「ホーム画面に追加」でインストール後、アプリから設定してください';
+        } else {
+          btn.textContent = '⚠️ 未対応';
+          btn.style.background = '#aaa';
+          btn.disabled = true;
+        }
+        return;
+      }
+
+      if (isiOS() && !isStandalone()) {
+        btn.textContent = '📱 ホーム画面から起動してください';
+        btn.style.background = '#aaa';
+        btn.disabled = true;
+        status.textContent = 'Safariの「ホーム画面に追加」でインストール後、アプリから設定してください';
+        return;
+      }
+
       if (permission === 'granted') {
         btn.textContent = '✅ 通知は有効です';
         btn.style.background = '#2d6a4f';
@@ -608,7 +686,7 @@
         btn.textContent = '🚫 通知がブロックされています';
         btn.style.background = '#aaa';
         btn.disabled = true;
-        status.textContent = 'ブラウザの設定から許可してください';
+        status.textContent = '設定アプリ → Safari → 詳細 → Webサイトの設定 から許可してください';
       }
     }
 
