@@ -624,7 +624,7 @@
   </nav>
 
   <script>
-    const VERSION = '2026.06.07-12';
+    const VERSION = '2026.06.07-13';
 
     document.getElementById('version-label').textContent = 'v' + VERSION;
     document.getElementById('version-date').textContent =
@@ -1065,7 +1065,7 @@
     function resetForm() {
       editingId = null;
       document.getElementById('item-name').value = '';
-      document.getElementById('item-expiry').value = defaultExpiryDate();
+      document.getElementById('item-expiry').value = '';
       document.getElementById('item-qty').value = '1';
       document.getElementById('item-unit').value = '';
       document.getElementById('item-category').value = 'たべ物';
@@ -1180,7 +1180,9 @@
       return d.toISOString().slice(0, 10);
     }
 
-    document.getElementById('item-expiry').value = defaultExpiryDate();
+    document.getElementById('item-expiry').addEventListener('focus', function() {
+      if (!this.value) this.value = defaultExpiryDate();
+    });
 
     renderItems();
 
