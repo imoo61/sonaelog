@@ -178,8 +178,8 @@
       -webkit-appearance: none;
     }
 
-    /* エクスポートボタン */
-    #export-btn {
+    /* エクスポート・インポートボタン */
+    #export-btn, #import-btn {
       width: 100%;
       padding: 14px;
       background: white;
@@ -189,10 +189,10 @@
       font-size: 16px;
       font-weight: bold;
       cursor: pointer;
-      margin-bottom: 16px;
+      margin-bottom: 12px;
       touch-action: manipulation;
     }
-    #export-btn:active { background: #e8f5e9; }
+    #export-btn:active, #import-btn:active { background: #e8f5e9; }
 
     /* 追加・保存ボタン共通 */
     #add-btn {
@@ -396,8 +396,11 @@
         </div>
       </div>
 
-      <!-- エクスポート -->
-      <button id="export-btn" onclick="exportJSON()">📥 データをエクスポート（JSON）</button>
+      <!-- エクスポート・インポート -->
+      <button id="export-btn" onclick="exportJSON()">📤 データをエクスポート（JSON）</button>
+      <button id="import-btn" onclick="document.getElementById('import-file').click()">📥 データをインポート（JSON）</button>
+      <input id="import-file" type="file" accept=".json" style="display:none" onchange="importJSON(this)">
+      <div id="import-msg" style="display:none;text-align:center;font-size:14px;margin-top:4px;"></div>
     </div>
 
     <!-- 在庫リスト -->
@@ -1044,6 +1047,46 @@
       a.href = URL.createObjectURL(blob);
       a.download = `備えログ_${new Date().toISOString().slice(0,10)}.json`;
       a.click();
+    }
+
+    // JSONインポート
+    function importJSON(input) {
+      const file = input.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        try {
+          const data = JSON.parse(e.target.result);
+          if (!data.items || !Array.isArray(data.items)) throw new Error('形式が正しくありません');
+
+          if (!confirm(`在庫${data.items.length}件をインポートします。現在のデータは上書きされます。よろしいですか？`)) {
+            input.value = '';
+            return;
+          }
+
+          localStorage.setItem('sonaelog-items', JSON.stringify(data.items));
+          if (data.settings && Object.keys(data.settings).length > 0) {
+            localStorage.setItem('sonaelog-settings', JSON.stringify(data.settings));
+            loadSettings();
+          }
+
+          const msg = document.getElementById('import-msg');
+          msg.textContent = `✅ ${data.items.length}件をインポートしました`;
+          msg.style.color = '#2d6a4f';
+          msg.style.display = 'block';
+          setTimeout(() => msg.style.display = 'none', 3000);
+
+          if (currentView === 'location') renderByLocation(); else renderItems();
+        } catch (err) {
+          const msg = document.getElementById('import-msg');
+          msg.textContent = '❌ 読み込みに失敗しました（ファイルを確認してください）';
+          msg.style.color = '#e53e3e';
+          msg.style.display = 'block';
+          setTimeout(() => msg.style.display = 'none', 4000);
+        }
+        input.value = '';
+      };
+      reader.readAsText(file);
     }
   </script>
 
