@@ -611,6 +611,11 @@
       navigator.serviceWorker.register('./sw.js');
     }
 
+    // iOSにデータを自動削除しないよう永続化リクエスト
+    if (navigator.storage && navigator.storage.persist) {
+      navigator.storage.persist();
+    }
+
     function isiOS() {
       return /iP(hone|ad|od)/.test(navigator.userAgent);
     }
