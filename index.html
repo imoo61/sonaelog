@@ -396,7 +396,7 @@
           <div class="gauge-fill" id="food-fill" style="width:0%"></div>
         </div>
         <div class="gauge-label" style="margin-top:10px">
-          <span>水・のみ物（L換算）</span>
+          <span>のみ物（L換算）</span>
           <span style="text-align:right;">
             <span id="water-fraction" style="font-size:12px;color:#888;margin-right:6px;"></span><span id="water-pct">0%</span>
           </span>
@@ -629,7 +629,7 @@
   </nav>
 
   <script>
-    const VERSION = '2026.06.07-16';
+    const VERSION = '2026.06.07-17';
 
     document.getElementById('version-label').textContent = 'v' + VERSION;
     document.getElementById('version-date').textContent =
@@ -829,10 +829,10 @@
         .reduce((sum, i) => sum + i.qty, 0);
       const foodPct = requiredFood > 0 ? Math.min(100, Math.round(actualFood / requiredFood * 100)) : 0;
 
-      // 水・のみ物：1人1日3L（「のみ物」カテゴリ＋たべ物カテゴリで名前に「水」を含むもの）
+      // のみ物：1人1日3L（「のみ物」カテゴリのみ）
       const requiredWater = people * days * 3;
       const actualWater = items
-        .filter(i => i.category === 'のみ物' || (i.category === 'たべ物' && i.name.includes('水')))
+        .filter(i => i.category === 'のみ物')
         .reduce((sum, i) => sum + (i.bottleSize != null ? i.qty * i.bottleSize : i.qty), 0);
       const waterPct = requiredWater > 0 ? Math.min(100, Math.round(actualWater / requiredWater * 100)) : 0;
 
