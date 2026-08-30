@@ -368,6 +368,29 @@
     }
     .nav-btn span.icon { font-size: 22px; }
     .nav-btn.active { color: #2d6a4f; font-weight: bold; }
+
+    /* ストレージ揮発の警告バナー（Safariタブ／プライベートブラウズ時） */
+    .storage-warning {
+      display: none;
+      background: #fde8e8;
+      color: #9b2020;
+      font-size: 13px;
+      line-height: 1.7;
+      padding: 12px 16px;
+      border-bottom: 1px solid #f0c4c4;
+    }
+    .storage-warning.show { display: block; }
+    .storage-warning b { color: #7a1515; }
+    .storage-warning .sw-dismiss {
+      margin-top: 8px;
+      background: none;
+      border: 1px solid #cf9a9a;
+      color: #9b2020;
+      border-radius: 6px;
+      padding: 5px 12px;
+      font-size: 12px;
+      cursor: pointer;
+    }
   </style>
 </head>
 <body>
@@ -376,6 +399,13 @@
     <span>🎒</span>
     <h1>災害時の備蓄</h1>
   </header>
+
+  <div id="storage-warning" class="storage-warning">
+    <b>⚠️ このままだと入力したデータが消えます</b><br>
+    Safariのタブ（特にプライベートブラウズ）では、タブを閉じたり数日開かないだけで在庫データが消去されます。
+    共有ボタンから <b>「ホーム画面に追加」</b> して、以後はホーム画面のアイコンから開いてください。消えなくなります。
+    <div><button class="sw-dismiss" onclick="dismissStorageWarning()">このメッセージを隠す</button></div>
+  </div>
 
   <main>
 
@@ -440,8 +470,15 @@
       <!-- エクスポート・インポート -->
       <button id="export-btn" onclick="exportJSON()">📤 データをエクスポート（JSON）</button>
       <button id="import-btn" onclick="document.getElementById('import-file').click()">📥 データをインポート（JSON）</button>
-      <input id="import-file" type="file" accept=".json" style="display:none" onchange="importJSON(this)">
+      <input id="import-file" type="file" accept=".json,application/json" style="display:none" onchange="importJSON(this)">
       <div id="import-msg" style="display:none;text-align:center;font-size:14px;margin-top:4px;"></div>
+
+      <details id="paste-import" style="margin-top:4px;">
+        <summary style="font-size:14px;color:#2d6a4f;cursor:pointer;padding:10px 0;">うまくいかない場合：JSONを貼り付けて取り込む</summary>
+        <p style="font-size:12px;color:#888;margin:4px 0 8px;">「ファイル」アプリで書き出した .json を開き、全選択→コピーして、下に貼り付けてください。</p>
+        <textarea id="paste-import-text" rows="6" placeholder='{ "items": [ ... ] } を貼り付け' style="width:100%;font-size:14px;padding:10px;border:1px solid #ddd;border-radius:8px;font-family:ui-monospace,monospace;"></textarea>
+        <button id="paste-import-btn" onclick="importFromText()" style="width:100%;padding:12px;margin-top:8px;background:white;color:#2d6a4f;border:2px solid #2d6a4f;border-radius:10px;font-size:15px;font-weight:bold;cursor:pointer;">この内容を取り込む</button>
+      </details>
     </div>
 
     <!-- 備品追加 -->
@@ -664,7 +701,7 @@
   </nav>
 
   <script>
-    const VERSION = '2026.06.07-22';
+    const VERSION = '2026.06.07-25';
 
     document.getElementById('version-label').textContent = 'v' + VERSION;
     document.getElementById('version-date').textContent =
@@ -1014,6 +1051,19 @@
         sel.value === 'custom' ? 'block' : 'none';
     }
 
+    // Safariのタブ／プライベートブラウズではストレージが消えるため警告を表示
+    // （ホーム画面から起動＝スタンドアロン時は永続化されるので出さない）
+    function initStorageWarning() {
+      if (!isiOS() || isStandalone()) return;
+      if (sessionStorage.getItem('sonaelog-hide-storage-warning') === '1') return;
+      document.getElementById('storage-warning').classList.add('show');
+    }
+    function dismissStorageWarning() {
+      document.getElementById('storage-warning').classList.remove('show');
+      try { sessionStorage.setItem('sonaelog-hide-storage-warning', '1'); } catch (e) {}
+    }
+    initStorageWarning();
+
     // ページ読み込み時に設定を復元
     loadSettings();
 
@@ -1330,43 +1380,70 @@
     }
 
     // JSONインポート
+    function importMsg(text, ok) {
+      const msg = document.getElementById('import-msg');
+      msg.textContent = text;
+      msg.style.color = ok ? '#2d6a4f' : '#e53e3e';
+      msg.style.display = 'block';
+      setTimeout(() => msg.style.display = 'none', ok ? 3000 : 8000);
+    }
+
+    // JSON文字列を検証して取り込む。成功したら true。
+    function applyImportText(raw) {
+      let text = (typeof raw === 'string' ? raw : '').replace(/^﻿/, '').trim(); // 先頭BOM・空白を除去
+      if (!text) { importMsg('❌ 中身が空です（ファイルがまだダウンロードされていない可能性）', false); return false; }
+      if (text[0] !== '{' && text[0] !== '[') {
+        importMsg('❌ JSONではありません。先頭が「' + text.slice(0, 16) + '…」です', false);
+        return false;
+      }
+
+      let data;
+      try {
+        data = JSON.parse(text);
+      } catch (err) {
+        importMsg('❌ JSONが壊れています（' + err.message + '）', false);
+        return false;
+      }
+
+      // { items:[...] } 形式でも、素の配列 [...] 形式でも受け付ける
+      const items = Array.isArray(data) ? data
+                  : (data && Array.isArray(data.items)) ? data.items
+                  : null;
+      if (!items) { importMsg('❌ 在庫データ（items）が見つかりません', false); return false; }
+
+      if (!confirm(`在庫${items.length}件をインポートします。現在のデータは上書きされます。よろしいですか？`)) return false;
+
+      try {
+        localStorage.setItem('sonaelog-items', JSON.stringify(items));
+        if (data && data.settings && typeof data.settings === 'object' && Object.keys(data.settings).length > 0) {
+          localStorage.setItem('sonaelog-settings', JSON.stringify(data.settings));
+          loadSettings();
+        }
+      } catch (err) {
+        importMsg('❌ 保存できませんでした（' + err.message + '）', false);
+        return false;
+      }
+
+      if (currentView === 'location') renderByLocation(); else renderItems();
+      importMsg(`✅ ${items.length}件をインポートしました`, true);
+      return true;
+    }
+
     function importJSON(input) {
       const file = input.files[0];
       if (!file) return;
       const reader = new FileReader();
+      reader.onerror = () => { importMsg('❌ ファイルを開けませんでした', false); input.value = ''; };
       reader.onload = function(e) {
-        try {
-          const data = JSON.parse(e.target.result);
-          if (!data.items || !Array.isArray(data.items)) throw new Error('形式が正しくありません');
-
-          if (!confirm(`在庫${data.items.length}件をインポートします。現在のデータは上書きされます。よろしいですか？`)) {
-            input.value = '';
-            return;
-          }
-
-          localStorage.setItem('sonaelog-items', JSON.stringify(data.items));
-          if (data.settings && Object.keys(data.settings).length > 0) {
-            localStorage.setItem('sonaelog-settings', JSON.stringify(data.settings));
-            loadSettings();
-          }
-
-          const msg = document.getElementById('import-msg');
-          msg.textContent = `✅ ${data.items.length}件をインポートしました`;
-          msg.style.color = '#2d6a4f';
-          msg.style.display = 'block';
-          setTimeout(() => msg.style.display = 'none', 3000);
-
-          if (currentView === 'location') renderByLocation(); else renderItems();
-        } catch (err) {
-          const msg = document.getElementById('import-msg');
-          msg.textContent = '❌ 読み込みに失敗しました（ファイルを確認してください）';
-          msg.style.color = '#e53e3e';
-          msg.style.display = 'block';
-          setTimeout(() => msg.style.display = 'none', 4000);
-        }
+        applyImportText(e.target.result);
         input.value = '';
       };
       reader.readAsText(file);
+    }
+
+    function importFromText() {
+      const ta = document.getElementById('paste-import-text');
+      if (applyImportText(ta.value)) ta.value = '';
     }
   </script>
 
