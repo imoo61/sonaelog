@@ -1,21 +1,17 @@
 // ============================================================
 // Firebase 設定ファイル
 // ------------------------------------------------------------
-// 18時以降、Firebase コンソールで「ウェブアプリを追加」して表示される
-// firebaseConfig の中身を、下の値に置き換えてください。
-//
 // ここにある apiKey / appId などは「秘密情報」ではありません。
-// GitHub に公開しても問題ありません（アクセス制御は Firestore の
-// セキュリティルールで行います。firestore.rules を参照）。
+// Firebase のウェブ設定は公開前提で、アクセス制御は Firestore の
+// セキュリティルール（firestore.rules）と承認済みドメインで行います。
 //
-// 値が「ここに」のままの間は、アプリは自動的に
-// 「この端末だけモード（ローカル専用）」で動きます。
+// プロジェクト: sonaelog-share
 // ============================================================
 window.FIREBASE_CONFIG = {
-  apiKey: "ここに-apiKey",
-  authDomain: "ここに.firebaseapp.com",
-  projectId: "ここに-projectId",
-  storageBucket: "ここに.appspot.com",
-  messagingSenderId: "ここに-senderId",
-  appId: "ここに-appId"
+  apiKey: "AIzaSyBcnpXe-jCCUu-h0YgRCsNjha1ckTRn8YQ",
+  authDomain: "sonaelog-share.firebaseapp.com",
+  projectId: "sonaelog-share",
+  storageBucket: "sonaelog-share.firebasestorage.app",
+  messagingSenderId: "589563326399",
+  appId: "1:589563326399:web:d0eab0c82b40cc0aeabb0a"
 };
