@@ -768,7 +768,7 @@
   <script src="./firebase-config.js"></script>
 
   <script>
-    const VERSION = '2026.09.07-fam2';
+    const VERSION = '2026.09.07-fam3';
 
     document.getElementById('version-label').textContent = 'v' + VERSION;
     document.getElementById('version-date').textContent =
@@ -1600,9 +1600,11 @@
 
     function docRef() {
       if (!SYNC.ready) return null;
-      const db = firebase.firestore();
-      if (SYNC.user && SYNC.householdId) return db.collection('households').doc(SYNC.householdId);
-      if (SYNC.user) return db.collection('users').doc(SYNC.user.uid);
+      // milestone1：世帯に入っている時だけクラウド同期する。
+      // （ログインのみ＝世帯なしの間はローカルのまま。空データで上書きし返す事故を防ぐ）
+      if (SYNC.user && SYNC.householdId) {
+        return firebase.firestore().collection('households').doc(SYNC.householdId);
+      }
       return null;
     }
 
