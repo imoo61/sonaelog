@@ -775,7 +775,7 @@
   <script src="./firebase-config.js"></script>
 
   <script>
-    const VERSION = '2026.09.07-fam5';
+    const VERSION = '2026.09.07-fam6';
 
     document.getElementById('version-label').textContent = 'v' + VERSION;
     document.getElementById('version-date').textContent =
@@ -794,11 +794,11 @@
     const OLD_SETTINGS = 'sonaelog-settings';
 
     // ---- ストレージ安全アクセス（プライバシー設定等で例外が出てもアプリを止めない）----
-    function lsGet(k){ try { return lsGet(k); } catch (e) { return null; } }
-    function lsSet(k, v){ try { lsSet(k, v); return true; } catch (e) { console.warn('localStorage 保存不可', e); return false; } }
-    function lsDel(k){ try { lsDel(k); } catch (e) {} }
-    function ssGet(k){ try { return ssGet(k); } catch (e) { return null; } }
-    function ssSet(k, v){ try { sessionStorage.setItem(k, v); } catch (e) {} }
+    function lsGet(k){ try { return window.localStorage.getItem(k); } catch (e) { return null; } }
+    function lsSet(k, v){ try { window.localStorage.setItem(k, v); return true; } catch (e) { console.warn('localStorage 保存不可', e); return false; } }
+    function lsDel(k){ try { window.localStorage.removeItem(k); } catch (e) {} }
+    function ssGet(k){ try { return window.sessionStorage.getItem(k); } catch (e) { return null; } }
+    function ssSet(k, v){ try { window.sessionStorage.setItem(k, v); } catch (e) {} }
 
     // ---- 家族共有（同期）の状態。TDZ回避のためスクリプト先頭で初期化する ----
     const SYNC = {
