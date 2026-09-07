@@ -720,6 +720,13 @@
       </div>
 
       <div class="card">
+        <h3>🔧 ストレージ診断</h3>
+        <p style="font-size:13px;color:#666;margin-bottom:10px;">保存できない原因を調べます。結果をそのまま伝えてください。</p>
+        <button class="sync-btn outline" onclick="runDiag()">診断を実行</button>
+        <pre id="diag-out" style="white-space:pre-wrap;word-break:break-all;font-size:12px;line-height:1.6;background:#f7f7f2;border:1px solid #e3e3d8;border-radius:8px;padding:10px;margin-top:10px;font-family:ui-monospace,monospace;color:#333;">（未実行）</pre>
+      </div>
+
+      <div class="card">
         <h3>ℹ️ バージョン情報</h3>
         <div style="display:flex;justify-content:space-between;align-items:center;font-size:14px;">
           <span style="color:#555;">災害時の備蓄（家族共有版）</span>
@@ -768,7 +775,7 @@
   <script src="./firebase-config.js"></script>
 
   <script>
-    const VERSION = '2026.09.07-fam4';
+    const VERSION = '2026.09.07-fam5';
 
     document.getElementById('version-label').textContent = 'v' + VERSION;
     document.getElementById('version-date').textContent =
@@ -1839,6 +1846,56 @@
         + ' <button class="sync-btn outline" style="width:auto;display:inline-block;padding:6px 12px;margin-top:0;font-size:13px;" onclick="copyCode()">コピー</button></p>'
         + '<button class="sync-btn danger" onclick="leaveHousehold()">この端末を世帯から外す</button>'
         + '<button class="sync-btn danger" onclick="signOutUser()">ログアウト</button>';
+    }
+
+    // ---- ストレージ診断 ----
+    function runDiag() {
+      const L = [];
+      const add = (k, v) => L.push(k + ': ' + v);
+      add('URL', String(location.origin + location.pathname).slice(0, 120));
+      add('standalone', isStandalone() ? 'はい（ホーム画面から起動）' : 'いいえ（ブラウザタブ）');
+      add('版', VERSION);
+
+      // 生の localStorage 往復テスト
+      try {
+        localStorage.setItem('__diag__', 'abc123');
+        const v = localStorage.getItem('__diag__');
+        add('localStorage往復', v === 'abc123' ? 'OK' : 'NG（読み値=' + JSON.stringify(v) + '）');
+        localStorage.removeItem('__diag__');
+      } catch (e) {
+        add('localStorage例外', e.name + ' / ' + e.message);
+      }
+
+      // 保存されているキー一覧
+      try {
+        const keys = [];
+        for (let i = 0; i < localStorage.length; i++) keys.push(localStorage.key(i));
+        add('キー数', localStorage.length);
+        add('キー', keys.length ? keys.join(' , ') : '(なし)');
+      } catch (e) {
+        add('キー列挙例外', e.name + ' / ' + e.message);
+      }
+
+      // 現行版・家族版それぞれのデータが見えるか
+      const cur = lsGet(OLD_ITEMS);
+      const fam = lsGet(K_ITEMS);
+      add('現行版 ' + OLD_ITEMS, cur ? ('あり ' + cur.length + '文字') : 'なし');
+      add('家族版 ' + K_ITEMS, fam ? ('あり ' + fam.length + '文字') : 'なし');
+      add('画面上の在庫', loadItems().length + '件');
+
+      // sessionStorage / IndexedDB
+      try {
+        sessionStorage.setItem('__diag__', 'x');
+        add('sessionStorage', sessionStorage.getItem('__diag__') === 'x' ? 'OK' : 'NG');
+        sessionStorage.removeItem('__diag__');
+      } catch (e) { add('sessionStorage例外', e.name); }
+      add('indexedDB', (typeof indexedDB !== 'undefined' && indexedDB) ? 'あり' : 'なし');
+
+      // 同期状態
+      add('同期', SYNC.mode + ' / ログイン' + (SYNC.user ? '済' : '無') + ' / 世帯' + (SYNC.householdId ? 'あり' : 'なし'));
+      add('SW', ('serviceWorker' in navigator && navigator.serviceWorker.controller) ? '制御中' : '未制御');
+
+      document.getElementById('diag-out').textContent = L.join('\n');
     }
 
     // ---- 起動時処理（すべての const / 関数定義が済んだ最後にまとめて実行）----
