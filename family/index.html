@@ -775,7 +775,7 @@
   <script src="./firebase-config.js"></script>
 
   <script>
-    const VERSION = '2026.09.07-fam6';
+    const VERSION = '2026.09.07-fam7';
 
     document.getElementById('version-label').textContent = 'v' + VERSION;
     document.getElementById('version-date').textContent =
@@ -1702,6 +1702,9 @@
 
     async function createHousehold() {
       if (!SYNC.user) { alert('先にログインしてください'); return; }
+      if (SYNC.householdId) { alert('すでに世帯に入っています。'); renderSyncCard(); return; }
+      if (SYNC.creating) return;              // 連打で二重作成されるのを防ぐ
+      SYNC.creating = true;
       const db = firebase.firestore();
       const id = 'h_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
       const code = genCode();
@@ -1729,6 +1732,8 @@
         alert('世帯を作成しました。\n招待コード：' + code + '\nこのコードを家族に伝えてください。');
       } catch (e) {
         alert('世帯の作成に失敗しました: ' + e.message);
+      } finally {
+        SYNC.creating = false;
       }
     }
 
@@ -1737,6 +1742,8 @@
       const input = document.getElementById('sync-join-code');
       const code = (input && input.value || '').trim().toUpperCase();
       if (!code) { alert('招待コードを入力してください'); return; }
+      if (SYNC.joining) return;               // 連打防止
+      SYNC.joining = true;
       const db = firebase.firestore();
       try {
         const idx = await db.collection('inviteCodes').doc(code).get();
@@ -1753,6 +1760,8 @@
         alert('世帯に参加しました。家族のデータが表示されます。');
       } catch (e) {
         alert('参加に失敗しました: ' + e.message);
+      } finally {
+        SYNC.joining = false;
       }
     }
 
