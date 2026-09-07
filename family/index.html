@@ -768,7 +768,7 @@
   <script src="./firebase-config.js"></script>
 
   <script>
-    const VERSION = '2026.09.07-fam1';
+    const VERSION = '2026.09.07-fam2';
 
     document.getElementById('version-label').textContent = 'v' + VERSION;
     document.getElementById('version-date').textContent =
@@ -1648,17 +1648,26 @@
     }
 
     // ---- 認証 ----
+    // signInWithRedirect は iOS Safari（ストレージ分離）で
+    // 「Unable to process request due to missing initial state」になるため
+    // ポップアップ方式に統一する。
     function signInGoogle() {
       if (!SYNC.ready) { alert('同期は未設定です'); return; }
       const provider = new firebase.auth.GoogleAuthProvider();
-      if (isStandalone()) {
-        // ホーム画面PWAではポップアップが不安定なためリダイレクト
-        firebase.auth().signInWithRedirect(provider);
-      } else {
-        firebase.auth().signInWithPopup(provider).catch(function () {
-          firebase.auth().signInWithRedirect(provider);
+      provider.setCustomParameters({ prompt: 'select_account' });
+      firebase.auth().signInWithPopup(provider)
+        .then(function () { renderSyncCard(); })
+        .catch(function (e) {
+          const code = (e && e.code) || '';
+          console.warn('signInWithPopup 失敗', e);
+          if (code === 'auth/popup-blocked') {
+            alert('ポップアップがブロックされました。設定 → Safari →「ポップアップブロック」をオフにして、もう一度お試しください。');
+          } else if (code === 'auth/popup-closed-by-user' || code === 'auth/cancelled-popup-request') {
+            /* ユーザーが閉じただけ。何もしない */
+          } else {
+            alert('ログインに失敗しました：' + (code || (e && e.message) || e));
+          }
         });
-      }
     }
     function signOutUser() {
       if (SYNC.unsub) { SYNC.unsub(); SYNC.unsub = null; }
