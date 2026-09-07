@@ -1,0 +1,41 @@
+rules_version = '2';
+
+// ============================================================
+// 家族共有版 Firestore セキュリティルール
+// ------------------------------------------------------------
+// このファイルは【マイルストーン1（自分の家族でのテスト）用】の
+// ゆるめのルールです。ログイン済みなら誰でも読み書きできます。
+//
+// 町内会など第三者に配布する前に、必ず firestore.rules.production
+// の内容（世帯メンバーのみ許可）に差し替えてください。
+//
+// 反映方法：
+//   Firebase コンソール → Firestore Database → ルール
+//   に貼り付けて「公開」
+// ============================================================
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // 個人データ：本人のみ
+    match /users/{uid} {
+      allow read, write: if request.auth != null && request.auth.uid == uid;
+      match /{sub=**} {
+        allow read, write: if request.auth != null && request.auth.uid == uid;
+      }
+    }
+
+    // 世帯データ：テスト中はログイン済みなら許可
+    match /households/{hid} {
+      allow read, write: if request.auth != null;
+      match /{sub=**} {
+        allow read, write: if request.auth != null;
+      }
+    }
+
+    // 招待コード → 世帯ID の索引：テスト中はログイン済みなら許可
+    match /inviteCodes/{code} {
+      allow read, write: if request.auth != null;
+    }
+  }
+}

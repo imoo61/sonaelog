@@ -1,0 +1,66 @@
+rules_version = '2';
+
+// ============================================================
+// 家族共有版 Firestore セキュリティルール【本番用】
+// ------------------------------------------------------------
+// 第三者（町内会など）へ配布する前に、これを Firebase コンソールの
+// ルールに反映してください。
+//
+// 方針：
+//  - users/{uid}        … 本人のみ
+//  - households/{hid}    … その世帯の members に入っている人のみ読み書き
+//  - 非メンバーの参加    … 「招待コードが一致」かつ「自分のUIDを1つ追加
+//                          するだけ（他は変更しない）」のときだけ update 可
+//  - inviteCodes/{code}  … ログイン済みなら1件取得は可（列挙は不可）。
+//                          作成は本人名義のみ。更新・削除は不可。
+// ============================================================
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    match /users/{uid} {
+      allow read, write: if request.auth != null && request.auth.uid == uid;
+      match /{sub=**} {
+        allow read, write: if request.auth != null && request.auth.uid == uid;
+      }
+    }
+
+    match /households/{hid} {
+      function isMember() {
+        return request.auth != null && request.auth.uid in resource.data.members;
+      }
+      // 招待コード一致＋自分のUIDだけ member として追加、他フィールドは不変
+      function joiningWithCode() {
+        return request.auth != null
+          && request.resource.data.inviteCode == resource.data.inviteCode
+          && request.resource.data.members.diff(resource.data.members).addedKeys().hasOnly([request.auth.uid])
+          && request.resource.data.members.diff(resource.data.members).removedKeys().size() == 0
+          && request.resource.data.members[request.auth.uid] == 'member'
+          && request.resource.data.items == resource.data.items
+          && request.resource.data.name == resource.data.name;
+      }
+
+      allow get: if isMember();
+      allow list: if false;
+      allow create: if request.auth != null
+        && request.auth.uid in request.resource.data.members
+        && request.resource.data.members[request.auth.uid] == 'owner';
+      allow update: if isMember() || joiningWithCode();
+      allow delete: if false;
+
+      match /{sub=**} {
+        allow read, write: if request.auth != null
+          && request.auth.uid in get(/databases/$(database)/documents/households/$(hid)).data.members;
+      }
+    }
+
+    match /inviteCodes/{code} {
+      allow get: if request.auth != null;
+      allow list: if false;
+      allow create: if request.auth != null
+        && request.resource.data.keys().hasOnly(['householdId', 'createdBy'])
+        && request.resource.data.createdBy == request.auth.uid;
+      allow update, delete: if false;
+    }
+  }
+}
