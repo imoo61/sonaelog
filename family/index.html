@@ -768,7 +768,7 @@
   <script src="./firebase-config.js"></script>
 
   <script>
-    const VERSION = '2026.09.07-fam3';
+    const VERSION = '2026.09.07-fam4';
 
     document.getElementById('version-label').textContent = 'v' + VERSION;
     document.getElementById('version-date').textContent =
@@ -1506,13 +1506,19 @@
         importMsg('❌ 保存できませんでした（ブラウザがこのサイトのデータ保存を許可していません。設定 → Safari の「すべてのCookieをブロック」等をご確認ください）', false);
         return false;
       }
+      // 書いた直後に読み戻して、実際に保存できているか検証する
+      const readback = loadItems();
+      if (!Array.isArray(readback) || readback.length !== items.length) {
+        importMsg('⚠️ ' + items.length + '件を書き込みましたが、読み戻すと' + (Array.isArray(readback) ? readback.length : '?') + '件でした。ブラウザがこのサイトのデータ保存を制限しています（プライベートブラウズ／「すべてのCookieをブロック」／サイト越えトラッキング防止 などを確認してください）', false);
+        return false;
+      }
       if (data && data.settings && typeof data.settings === 'object' && Object.keys(data.settings).length > 0) {
         lsSet(K_SETTINGS, JSON.stringify(data.settings));
         loadSettings();
       }
 
       if (currentView === 'location') renderByLocation(); else renderItems();
-      cloudPush();
+      cloudPush(true);
       importMsg(`✅ ${items.length}件をインポートしました`, true);
       return true;
     }
