@@ -1,0 +1,12 @@
+{
+  "name": "sonaelog",
+  "private": true,
+  "version": "1.0.0",
+  "description": "防災備蓄管理 PWA。scripts/ の運用ツール用の最小構成（アプリ本体はビルド不要の静的HTML）",
+  "scripts": {
+    "pull-feedback": "node scripts/pull-feedback.js"
+  },
+  "dependencies": {
+    "firebase-admin": "^12.0.0"
+  }
+}

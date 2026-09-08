@@ -754,6 +754,13 @@
         <div id="notif-status"></div>
       </div>
 
+      <div class="card" id="feedback-card">
+        <h3>🗳 ご意見・要望</h3>
+        <div id="feedback-body">
+          <p class="sync-info">読み込み中…</p>
+        </div>
+      </div>
+
       <button id="save-btn" onclick="saveSettings()">保存する</button>
       <div id="save-msg" style="display:none;text-align:center;color:#2d6a4f;margin-top:10px;font-size:14px;">✅ 保存しました</div>
     </div>
@@ -787,7 +794,7 @@
   <script src="./firebase-config.js"></script>
 
   <script>
-    const VERSION = '2026.09.07-fam8';
+    const VERSION = '2026.09.07-fam9';
 
     document.getElementById('version-label').textContent = 'v' + VERSION;
     document.getElementById('version-date').textContent =
@@ -1926,6 +1933,59 @@
       }
     }
 
+    // ---- ご意見・要望 ----
+    function renderFeedbackCard() {
+      const body = document.getElementById('feedback-body');
+      if (!body) return;
+      if (!syncConfigured() || !firebaseLoaded()) {
+        body.innerHTML = '<p class="sync-info">この端末は同期未設定のため、要望の送信はできません。</p>';
+        return;
+      }
+      if (!SYNC.user) {
+        body.innerHTML = '<p class="sync-info">要望の送信にはログインが必要です（上の「家族で共有」からログインできます）。</p>';
+        return;
+      }
+      body.innerHTML =
+        '<p class="sync-info">アプリへの要望・不具合を送れます。<b>送信内容とアプリのバージョンだけ</b>が保存されます（名前などは保存されません）。</p>'
+        + '<textarea id="feedback-text" rows="4" maxlength="2000" placeholder="例：保管場所に「ベランダ」を追加したい" style="width:100%;font-size:15px;padding:10px;border:1px solid #ddd;border-radius:8px;background:white;"></textarea>'
+        + '<div style="text-align:right;font-size:12px;color:#aaa;margin-top:4px;"><span id="feedback-count">0</span> / 2000</div>'
+        + '<button class="sync-btn outline" id="feedback-send" onclick="sendFeedback()">送信する</button>'
+        + '<div id="feedback-msg" style="display:none;font-size:14px;text-align:center;margin-top:8px;"></div>';
+      const ta = document.getElementById('feedback-text');
+      ta.addEventListener('input', function () {
+        document.getElementById('feedback-count').textContent = ta.value.length;
+      });
+    }
+
+    async function sendFeedback() {
+      const ta = document.getElementById('feedback-text');
+      const btn = document.getElementById('feedback-send');
+      const msg = document.getElementById('feedback-msg');
+      const text = (ta.value || '').trim();
+      if (!text) { alert('内容を入力してください'); return; }
+      if (text.length > 2000) { alert('2000字以内で入力してください'); return; }
+      if (!SYNC.user || !firebaseLoaded()) { alert('ログインが必要です'); return; }
+      btn.disabled = true; btn.textContent = '送信中…';
+      try {
+        await firebase.firestore().collection('feedback').add({
+          text: text,
+          appVersion: VERSION,
+          createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+        });
+        ta.value = '';
+        document.getElementById('feedback-count').textContent = '0';
+        msg.textContent = '送信しました。ありがとうございます。';
+        msg.style.color = '#2d6a4f'; msg.style.display = 'block';
+        setTimeout(function () { msg.style.display = 'none'; }, 4000);
+      } catch (e) {
+        msg.textContent = '送信できませんでした（' + ((e && e.code) || (e && e.message) || e) + '）';
+        msg.style.color = '#e53e3e'; msg.style.display = 'block';
+        setTimeout(function () { msg.style.display = 'none'; }, 6000);
+      } finally {
+        btn.disabled = false; btn.textContent = '送信する';
+      }
+    }
+
     // ---- 同期カードの描画 ----
     function esc(s) {
       return (s == null ? '' : String(s)).replace(/[<>&"]/g, function (c) {
@@ -1940,6 +2000,7 @@
     }
 
     function renderSyncCard(remote) {
+      renderFeedbackCard();
       const body = document.getElementById('sync-card-body');
       if (!body) return;
 
@@ -2053,6 +2114,7 @@
     boot('storage-warning', initStorageWarning);
     boot('load-settings', loadSettings);   // 設定フォームの復元＋ダッシュボード計算
     boot('location-select', function () { buildLocationSelect(firstLocationName()); });
+    boot('feedback-card', renderFeedbackCard);
     boot('init-sync', initSync);           // 同期カード描画＋（設定済みなら）Firebase 接続
     boot('notifications', function () {
       if ('Notification' in window) {

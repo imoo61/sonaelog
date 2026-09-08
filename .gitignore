@@ -1,0 +1,13 @@
+# 依存パッケージ
+node_modules/
+
+# Firebase サービスアカウント鍵（絶対にコミットしない）
+scripts/serviceAccountKey.json
+**/serviceAccountKey*.json
+
+# 要望のローカルダンプ（作業用）
+scripts/feedback-dump.json
+
+# OS
+.DS_Store
+Thumbs.db
